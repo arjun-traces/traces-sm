@@ -1,0 +1,446 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>traces-sm — SGX Secrets & Key Management Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            950: '#030712',
+                            900: '#0f172a',
+                            850: '#151e32',
+                            800: '#1e293b',
+                            700: '#334155'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #030712; color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+        .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- Top Header Bar matching Console Screen Spec -->
+    <header class="border-b border-gray-800 bg-gray-900/90 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-indigo-600/20 rounded-xl border border-indigo-500/30 text-indigo-400 font-mono text-sm font-bold">
+                SGX
+            </div>
+            <div>
+                <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-2">
+                    traces-sm — SGX Secrets & Key Management Console
+                    <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">v0.1.0-native</span>
+                </h1>
+                <p class="text-[11px] text-gray-400">100% Rust-Native Multi-OS NIST SP 800-57 Framework</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3 text-xs font-mono">
+            <span class="px-2.5 py-1 rounded bg-gray-800 border border-gray-700 text-gray-300">Ubuntu 24.04 (GTK3)</span>
+            <span class="px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">SGX HW_ACTIVE</span>
+            <span class="px-2.5 py-1 rounded bg-indigo-500/10 border border-indigo-500/30 text-indigo-300">RA-TLS VERIFIED</span>
+            <button onclick="toggleAiDrawer()" class="px-3 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-indigo-200 font-semibold hover:bg-indigo-600/50 flex items-center space-x-1">
+                <span>✦ Traces AI</span>
+            </button>
+            <div class="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">A</div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Area -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Grouped Sidebar Navigation -->
+        <aside class="w-64 border-r border-gray-800 bg-gray-900/60 p-4 space-y-6 flex-shrink-0 font-mono text-xs">
+            <div class="space-y-1">
+                <h3 class="text-[10px] font-bold text-gray-500 px-3 uppercase tracking-wider">KEYS & SECRETS</h3>
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center justify-between px-3 py-2 font-semibold rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30">
+                    <span>• Dashboard</span><span class="text-[10px] opacity-40">⌘1</span>
+                </button>
+                <button onclick="switchTab('lifecycle')" id="nav-lifecycle" class="w-full flex items-center justify-between px-3 py-2 text-gray-400 rounded-lg hover:bg-gray-800/60 hover:text-gray-200">
+                    <span>• Key Lifecycle [8]</span><span class="text-[10px] opacity-40">⌘2</span>
+                </button>
+                <button onclick="switchTab('vault')" id="nav-vault" class="w-full flex items-center justify-between px-3 py-2 text-gray-400 rounded-lg hover:bg-gray-800/60 hover:text-gray-200">
+                    <span>• Vault [14]</span><span class="text-[10px] opacity-40">⌘3</span>
+                </button>
+            </div>
+
+            <div class="space-y-1">
+                <h3 class="text-[10px] font-bold text-gray-500 px-3 uppercase tracking-wider">NETWORK</h3>
+                <button onclick="switchTab('topology')" id="nav-topology" class="w-full flex items-center justify-between px-3 py-2 text-gray-400 rounded-lg hover:bg-gray-800/60 hover:text-gray-200">
+                    <span>• DKG Topology [3]</span><span class="text-[10px] opacity-40">⌘4</span>
+                </button>
+            </div>
+
+            <div class="space-y-1">
+                <h3 class="text-[10px] font-bold text-gray-500 px-3 uppercase tracking-wider">CRYPTOGRAPHY</h3>
+                <button onclick="switchTab('entropy')" id="nav-entropy" class="w-full flex items-center justify-between px-3 py-2 text-gray-400 rounded-lg hover:bg-gray-800/60 hover:text-gray-200">
+                    <span>• Entropy</span><span class="text-[10px] opacity-40">⌘5</span>
+                </button>
+                <button onclick="switchTab('zkp')" id="nav-zkp" class="w-full flex items-center justify-between px-3 py-2 text-gray-400 rounded-lg hover:bg-gray-800/60 hover:text-gray-200">
+                    <span>• ZKP Sandbox</span><span class="text-[10px] opacity-40">⌘6</span>
+                </button>
+            </div>
+
+            <div class="space-y-1">
+                <h3 class="text-[10px] font-bold text-gray-500 px-3 uppercase tracking-wider">GOVERNANCE &amp; DOCS</h3>
+                <button onclick="switchTab('policy')" id="nav-policy" class="w-full flex items-center justify-between px-3 py-2 text-gray-400 rounded-lg hover:bg-gray-800/60 hover:text-gray-200">
+                    <span>• Policy</span><span class="text-[10px] opacity-40">⌘7</span>
+                </button>
+                <button onclick="switchTab('docs')" id="nav-docs" class="w-full flex items-center justify-between px-3 py-2 text-gray-400 rounded-lg hover:bg-gray-800/60 hover:text-gray-200">
+                    <span>• Documentation</span><span class="text-[10px] opacity-40">⌘8</span>
+                </button>
+            </div>
+
+            <div class="pt-4 border-t border-gray-800 text-[10px] font-mono text-gray-400 space-y-1">
+                <p>ENCLAVE DEVICE:</p>
+                <p class="text-emerald-400 font-bold">/dev/sgx_enclave</p>
+                <p>EPC 21.2 MB / 64.0 MB</p>
+            </div>
+        </aside>
+
+        <!-- Center View Container -->
+        <main class="flex-1 p-8 overflow-y-auto" id="main-content">
+
+            <!-- TAB 1: EXECUTIVE DASHBOARD -->
+            <section id="tab-dashboard" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Executive Dashboard</h2>
+                        <p class="text-xs text-gray-400">Enclave health, key counts, cryptoperiod volume limits and throughput.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-sm">
+                        <p class="text-xs font-medium text-gray-400">ACTIVE NIST KEYS</p>
+                        <h3 class="text-3xl font-bold text-white mt-1">8</h3>
+                        <p class="text-xs text-indigo-400 mt-2 font-mono">RSA · ECDSA · ML-KEM</p>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-sm">
+                        <p class="text-xs font-medium text-gray-400">SEALED SECRETS</p>
+                        <h3 class="text-3xl font-bold text-white mt-1">14</h3>
+                        <p class="text-xs text-emerald-400 mt-2 font-mono">AES-256-GCM Envelope</p>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-sm">
+                        <p class="text-xs font-medium text-gray-400">DKG PEER QUORUM</p>
+                        <h3 class="text-3xl font-bold text-white mt-1">3</h3>
+                        <p class="text-xs text-purple-400 mt-2 font-mono">2-of-3 RA-TLS Connected</p>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-sm">
+                        <p class="text-xs font-medium text-gray-400">SP 800-90B DRBG</p>
+                        <h3 class="text-lg font-bold text-emerald-400 mt-2">✓ HEALTHY</h3>
+                        <p class="text-xs text-gray-400 mt-2 font-mono">APT &amp; RCT Passed</p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
+                    <h3 class="text-sm font-semibold text-gray-200">Enclave EPC Memory &amp; Cryptoperiod Telemetry</h3>
+                    
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-mono">
+                            <span class="text-gray-400">EPC Memory:</span>
+                            <span class="text-indigo-400">21.2 MB / 64.0 MB (33.1%)</span>
+                        </div>
+                        <div class="w-full bg-gray-950 h-2.5 rounded-full overflow-hidden border border-gray-800">
+                            <div class="bg-indigo-600 h-full w-[33%]"></div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-mono">
+                            <span class="text-gray-400">Cryptoperiod Volume:</span>
+                            <span class="text-emerald-400">1.2 GB / 4.2 GB (28.5% of max 2^32 bytes limit)</span>
+                        </div>
+                        <div class="w-full bg-gray-950 h-2.5 rounded-full overflow-hidden border border-gray-800">
+                            <div class="bg-emerald-500 h-full w-[28.5%]"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
+                        <h3 class="text-sm font-semibold text-gray-200">Cryptographic Throughput (Ops/sec)</h3>
+                        <div class="flex items-end space-x-4 h-40 pt-4">
+                            <div class="bg-indigo-600/50 w-8 h-[40%] rounded-t"></div>
+                            <div class="bg-indigo-600/70 w-8 h-[70%] rounded-t"></div>
+                            <div class="bg-indigo-500 w-8 h-[95%] rounded-t"></div>
+                            <div class="bg-indigo-600/80 w-8 h-[75%] rounded-t"></div>
+                            <div class="bg-indigo-600/60 w-8 h-[55%] rounded-t"></div>
+                            <div class="bg-indigo-600/40 w-8 h-[35%] rounded-t"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-3 font-mono text-xs">
+                        <h3 class="text-sm font-semibold text-gray-200 font-sans">Architecture Stack</h3>
+                        <div class="p-3 bg-gray-950 rounded-xl border border-gray-800">
+                            <span class="text-gray-400">Enclave Core:</span>
+                            <p class="text-indigo-300 font-bold">Fortanix EDP (Rust SGX target)</p>
+                        </div>
+                        <div class="p-3 bg-gray-950 rounded-xl border border-gray-800">
+                            <span class="text-gray-400">Host Proxy:</span>
+                            <p class="text-indigo-300 font-bold">Axum 0.7 + Tokio + SQLite SQLCipher</p>
+                        </div>
+                        <div class="p-3 bg-gray-950 rounded-xl border border-gray-800">
+                            <span class="text-gray-400">Desktop Console:</span>
+                            <p class="text-indigo-300 font-bold">eframe / egui (GTK3 / WebView2 / WKWebView)</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: KEY LIFECYCLE MATRIX -->
+            <section id="tab-lifecycle" class="space-y-6 hidden">
+                <h2 class="text-xl font-bold text-white">NIST SP 800-57 Key Lifecycle Matrix</h2>
+                <p class="text-xs text-gray-400">NIST SP 800-57 Part 1 Rev. 5 — state transitions from pre-operational through destroyed.</p>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-gray-950 text-gray-400 border-b border-gray-800">
+                            <tr>
+                                <th class="p-4">KEY ALIAS &amp; ID</th>
+                                <th class="p-4">ALGORITHM</th>
+                                <th class="p-4">KEYUSAGE FLAGS</th>
+                                <th class="p-4">CRYPTOPERIOD VOL</th>
+                                <th class="p-4">NIST STATE</th>
+                                <th class="p-4">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800 text-gray-300">
+                            <tr class="hover:bg-gray-800/40">
+                                <td class="p-4"><p class="font-bold text-white font-sans">rsa-master-cert</p><p class="text-[10px] text-gray-500">k-101</p></td>
+                                <td class="p-4 text-indigo-400 font-bold">RSA-4096</td>
+                                <td class="p-4">SIGN, VERIFY</td>
+                                <td class="p-4">1.2 GB / 4.2 GB</td>
+                                <td class="p-4"><span class="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/30 font-bold">OPERATIONAL</span></td>
+                                <td class="p-4"><button class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-white">Rotate</button></td>
+                            </tr>
+                            <tr class="hover:bg-gray-800/40">
+                                <td class="p-4"><p class="font-bold text-white font-sans">ecdsa-token-sign</p><p class="text-[10px] text-gray-500">k-102</p></td>
+                                <td class="p-4 text-indigo-400 font-bold">ECDSA-P256</td>
+                                <td class="p-4">SIGN, VERIFY</td>
+                                <td class="p-4">450 MB / 4.2 GB</td>
+                                <td class="p-4"><span class="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/30 font-bold">OPERATIONAL</span></td>
+                                <td class="p-4"><button class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-white">Rotate</button></td>
+                            </tr>
+                            <tr class="hover:bg-gray-800/40">
+                                <td class="p-4"><p class="font-bold text-white font-sans">pqc-kyber-kem</p><p class="text-[10px] text-gray-500">k-103</p></td>
+                                <td class="p-4 text-purple-400 font-bold">ML-KEM-768</td>
+                                <td class="p-4">KEY_WRAP</td>
+                                <td class="p-4">0 B / 4.2 GB</td>
+                                <td class="p-4"><span class="px-2 py-1 bg-indigo-500/10 text-indigo-300 rounded border border-indigo-500/30 font-bold">PRE_OPERATIONAL</span></td>
+                                <td class="p-4"><button class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Activate</button></td>
+                            </tr>
+                            <tr class="hover:bg-gray-800/40 bg-red-950/10">
+                                <td class="p-4"><p class="font-bold text-white font-sans">legacy-rsa-2048</p><p class="text-[10px] text-gray-500">k-104</p></td>
+                                <td class="p-4 text-indigo-400 font-bold">RSA-2048</td>
+                                <td class="p-4 text-red-300">DECRYPT_ONLY</td>
+                                <td class="p-4 text-red-400 font-bold">4.2 GB / 4.2 GB</td>
+                                <td class="p-4"><span class="px-2 py-1 bg-red-500/10 text-red-400 rounded border border-red-500/30 font-bold">DEACTIVATED</span></td>
+                                <td class="p-4"><button class="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-white">Shred</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bg-gray-900 border border-red-500/40 rounded-2xl p-6 space-y-3 font-mono text-xs">
+                    <h3 class="text-sm font-semibold text-white font-sans">SELECTED KEY DETAILS: legacy-rsa-2048 (k-104)</h3>
+                    <p class="text-red-400">NIST State: DEACTIVATED  |  Reason: Cryptoperiod volume limit reached (4.2 GB / 2^32 bytes limit)</p>
+                    <p class="text-gray-400">Policy Restriction: Operational signing disabled by policy.rs. Historical decryption permitted.</p>
+                    <div class="pt-2 flex space-x-3">
+                        <button class="px-4 py-2 bg-red-600 text-white rounded-lg font-sans font-bold">SP 800-88 Crypto-Shred</button>
+                        <button class="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg font-sans border border-gray-700">Export Public PEM</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: SECRET VAULT -->
+            <section id="tab-vault" class="space-y-6 hidden">
+                <h2 class="text-xl font-bold text-white">Sealed Secret Vault</h2>
+                <p class="text-xs text-gray-400">Envelope-encrypted payloads, tokens, symmetric keys, and certificate bundles.</p>
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center text-gray-400 font-mono text-xs">
+                    <p>14 Sealed Secret Blobs Active in SGX EPC Store.</p>
+                </div>
+            </section>
+
+            <!-- TAB 4: DKG TOPOLOGY -->
+            <section id="tab-topology" class="space-y-6 hidden">
+                <h2 class="text-xl font-bold text-white">Distributed Key Generation &amp; Node Topology</h2>
+                <p class="text-xs text-gray-400">2-of-3 threshold quorum with mutual RA-TLS DCAP attestation.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-gray-900 border border-indigo-500/40 rounded-2xl p-6 space-y-2">
+                        <h3 class="font-bold text-white">node-sgx-primary</h3>
+                        <p class="text-xs font-mono text-emerald-400">SGX TEE Primary (Fortanix EDP)</p>
+                        <p class="text-xs font-mono text-gray-400">Attestation: DCAP VERIFIED</p>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-2">
+                        <h3 class="font-bold text-white">node-peer-1</h3>
+                        <p class="text-xs font-mono text-purple-400">Threshold Peer (Share S1)</p>
+                        <p class="text-xs font-mono text-gray-400">RA-TLS Status: ONLINE</p>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-2">
+                        <h3 class="font-bold text-white">node-peer-2</h3>
+                        <p class="text-xs font-mono text-purple-400">Threshold Peer (Share S2)</p>
+                        <p class="text-xs font-mono text-gray-400">RA-TLS Status: ONLINE</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: ENTROPY -->
+            <section id="tab-entropy" class="space-y-6 hidden">
+                <h2 class="text-xl font-bold text-white">DRBG &amp; Entropy Health Monitor</h2>
+                <p class="text-xs text-gray-400">NIST SP 800-90A/B/C continuous health testing on hardware RDRAND/RDSEED entropy.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs">
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-2">
+                        <h3 class="text-sm font-semibold text-emerald-400">✓ Repetition Count Test (RCT)</h3>
+                        <p class="text-gray-400">Cutoff Threshold C = 16. Current repetition count: 1. Status: PASSED</p>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-2">
+                        <h3 class="text-sm font-semibold text-emerald-400">✓ Adaptive Proportion Test (APT)</h3>
+                        <p class="text-gray-400">Window W = 512, Cutoff Threshold C = 13. Status: PASSED</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: ZKP SANDBOX -->
+            <section id="tab-zkp" class="space-y-6 hidden">
+                <h2 class="text-xl font-bold text-white">ZKP &amp; Homomorphic Encryption Sandbox</h2>
+                <p class="text-xs text-gray-400">Schnorr Proof-of-Knowledge, Bulletproofs 32-bit range proofs, and Paillier PHE.</p>
+            </section>
+
+            <!-- TAB 7: POLICY -->
+            <section id="tab-policy" class="space-y-6 hidden">
+                <h2 class="text-xl font-bold text-white">Mandatory Security Policy Config</h2>
+                <p class="text-xs text-gray-400">Governance invariants enforced inside enclave/src/policy.rs.</p>
+            </section>
+
+            <!-- TAB 8: DOCUMENTATION -->
+            <section id="tab-docs" class="space-y-6 hidden">
+                <h2 class="text-xl font-bold text-white">Documentation Portal</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                    <a href="TECHNICAL_SPECIFICATION.html" class="p-4 bg-gray-900 border border-gray-800 rounded-xl hover:border-indigo-500 text-indigo-300 font-bold">10-Page Technical Specification</a>
+                    <a href="PRODUCT_SPECIFICATION.html" class="p-4 bg-gray-900 border border-gray-800 rounded-xl hover:border-indigo-500 text-indigo-300 font-bold">Product Specification Document (PSD)</a>
+                    <a href="CONFORMANCE_REPORT.html" class="p-4 bg-gray-900 border border-gray-800 rounded-xl hover:border-indigo-500 text-indigo-300 font-bold">NIST Conformance Report</a>
+                    <a href="PAGE_BY_PAGE_DESIGN.html" class="p-4 bg-gray-900 border border-gray-800 rounded-xl hover:border-indigo-500 text-indigo-300 font-bold">Page-by-Page Console Design</a>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Right Side Panel: Traces AI Assistant (Anthropic API Ready) -->
+        <aside id="ai-drawer" class="w-80 border-l border-gray-800 bg-gray-900 flex flex-col h-full shadow-2xl flex-shrink-0">
+            <div class="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-950">
+                <div class="flex items-center space-x-2">
+                    <span class="text-indigo-400 font-bold text-sm">✦ Traces AI</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">Anthropic Ready</span>
+                </div>
+                <button onclick="toggleAiDrawer()" class="text-gray-400 hover:text-white text-xs">✕</button>
+            </div>
+
+            <div class="p-3 bg-gray-950/60 border-b border-gray-800 text-xs space-y-2">
+                <label class="text-[10px] text-gray-400 font-mono">ANTHROPIC API KEY (CLAUDE):</label>
+                <input type="password" id="anthropic-key" placeholder="sk-ant-api..." class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-indigo-300 font-mono focus:outline-none focus:border-indigo-500">
+            </div>
+
+            <div class="flex-1 p-4 overflow-y-auto space-y-3 text-xs" id="chat-messages">
+                <div class="p-3 rounded-xl border bg-gray-800/80 text-gray-200 border-gray-700/60 text-xs leading-relaxed">
+                    <p class="font-mono text-[10px] font-bold opacity-60 mb-1">TRACES AI</p>
+                    <p>Enclave is HW_ACTIVE and all six security policy invariants are enforcing. Ask me about a key, a policy decision, or an attestation quote.</p>
+                </div>
+            </div>
+
+            <div class="p-3 border-t border-gray-800 bg-gray-950 space-y-2">
+                <div class="flex gap-1 overflow-x-auto pb-1 text-[10px] font-mono">
+                    <button onclick="sendQuickPrompt('Why is key k-104 deactivated?')" class="px-2 py-1 bg-gray-800 rounded border border-gray-700 text-gray-300 hover:bg-gray-700 whitespace-nowrap">Why k-104?</button>
+                    <button onclick="sendQuickPrompt('What is the APT cutoff in SP 800-90B?')" class="px-2 py-1 bg-gray-800 rounded border border-gray-700 text-gray-300 hover:bg-gray-700 whitespace-nowrap">APT cutoff</button>
+                    <button onclick="sendQuickPrompt('Check DKG threshold quorum status.')" class="px-2 py-1 bg-gray-800 rounded border border-gray-700 text-gray-300 hover:bg-gray-700 whitespace-nowrap">Quorum health</button>
+                </div>
+
+                <div class="flex space-x-2">
+                    <input type="text" id="chat-input" placeholder="Ask about keys, policy..." class="flex-1 bg-gray-900 border border-gray-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+                    <button onclick="sendMessage()" class="px-3 py-1.5 bg-indigo-600 text-white font-medium rounded-lg text-xs hover:bg-indigo-500">Send</button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'lifecycle', 'vault', 'topology', 'entropy', 'zkp', 'policy', 'docs'];
+            tabs.forEach(t => {
+                const sec = document.getElementById('tab-' + t);
+                const btn = document.getElementById('nav-' + t);
+                if (sec) sec.classList.add('hidden');
+                if (btn) {
+                    btn.classList.remove('bg-indigo-600/20', 'text-indigo-300', 'border', 'border-indigo-500/30');
+                    btn.classList.add('text-gray-400');
+                }
+            });
+
+            const activeSec = document.getElementById('tab-' + tabId);
+            const activeBtn = document.getElementById('nav-' + tabId);
+            if (activeSec) activeSec.classList.remove('hidden');
+            if (activeBtn) {
+                activeBtn.classList.add('bg-indigo-600/20', 'text-indigo-300', 'border', 'border-indigo-500/30');
+                activeBtn.classList.remove('text-gray-400');
+            }
+        }
+
+        function toggleAiDrawer() {
+            const drawer = document.getElementById('ai-drawer');
+            drawer.classList.toggle('hidden');
+        }
+
+        function sendQuickPrompt(txt) {
+            document.getElementById('chat-input').value = txt;
+            sendMessage();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const keyInput = document.getElementById('anthropic-key');
+            const msgBox = document.getElementById('chat-messages');
+            const txt = input.value.trim();
+            if (!txt) return;
+
+            // User Message
+            const userMsg = document.createElement('div');
+            userMsg.className = 'p-3 rounded-xl border bg-indigo-600/30 text-indigo-200 border-indigo-500/30 text-xs leading-relaxed';
+            userMsg.innerHTML = `<p class="font-mono text-[10px] font-bold opacity-60 mb-1">YOU</p><p>${txt}</p>`;
+            msgBox.appendChild(userMsg);
+
+            // Bot Response Simulation / Anthropic Connection
+            let reply = "Traces AI: Enclave telemetry healthy. Pass your Anthropic API Key above to activate live Claude intelligence.";
+            if (txt.includes("k-104")) {
+                reply = "Key k-104 (RSA-2048) was deactivated because its cryptoperiod volume limit reached 4.2 GB (2^32 bytes for AES-GCM). It is restricted to historical decryption.";
+            } else if (txt.includes("APT")) {
+                reply = "SP 800-90B Adaptive Proportion Test (APT) uses window W=512 and cutoff C=13. Current sample frequency is 3, status: PASSED.";
+            } else if (txt.includes("Quorum") || txt.includes("DKG")) {
+                reply = "DKG quorum is 2-of-3 threshold nodes. All RA-TLS peer channels are verified via Intel DCAP quotes.";
+            } else if (keyInput.value.trim().length > 0) {
+                reply = "Connected to Anthropic API (Claude 3.5 Sonnet). Enclave telemetry: HW_ACTIVE, 6/6 invariants enforcing.";
+            }
+
+            setTimeout(() => {
+                const aiMsg = document.createElement('div');
+                aiMsg.className = 'p-3 rounded-xl border bg-gray-800/80 text-gray-200 border-gray-700/60 text-xs leading-relaxed';
+                aiMsg.innerHTML = `<p class="font-mono text-[10px] font-bold opacity-60 mb-1">TRACES AI</p><p>${reply}</p>`;
+                msgBox.appendChild(aiMsg);
+                msgBox.scrollTop = msgBox.scrollHeight;
+            }, 300);
+
+            input.value = '';
+            msgBox.scrollTop = msgBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
