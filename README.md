@@ -1,4 +1,4 @@
-﻿# `traces-sm` — 100% Rust-Native SGX Secrets & Key Management Framework
+﻿# `traces-sm` — 100% Rust-Native Multi-OS SGX Secrets & Key Management Framework
 
 [![CI](https://github.com/arjun-traces/traces-sm/actions/workflows/ci.yml/badge.svg)](https://github.com/arjun-traces/traces-sm/actions/workflows/ci.yml)
 [![GitHub Pages](https://github.com/arjun-traces/traces-sm/actions/workflows/deploy-pages.yml/badge.svg)](https://arjun-traces.github.io/traces-sm/)
@@ -6,6 +6,16 @@
 [![NIST SP 800-57 Aligned](https://img.shields.io/badge/NIST%20SP%20800--57-Aligned-emerald.svg)](docs/STANDARDS_MAPPING.md)
 
 > `traces-sm` is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.
+
+---
+
+## 🖥️ Management Console Screens
+
+### Executive Dashboard & Telemetry
+![traces-sm Executive Dashboard](docs/images/dashboard.svg)
+
+### NIST SP 800-57 Key Lifecycle Matrix & State Machine
+![traces-sm Key Lifecycle Matrix](docs/images/key_lifecycle.svg)
 
 ---
 
@@ -29,16 +39,57 @@
 
 ---
 
-## 📊 Technical Comparison Matrix
+## 🏛️ 100% Rust-Native 5-Crate Workspace Architecture
 
-| Feature | `traces-sm` | HashiCorp Vault / OpenBao | Fortanix DSM | AWS CloudHSM |
-|---|---|---|---|---|
-| **Trust Boundary** | Intel SGX EPC Enclave | Host OS RAM | Intel SGX Enclave | Dedicated FIPS L3 HSM |
-| **Language Stack** | 100% Rust | Go | C / Rust / Java | Proprietary Firmware |
-| **Host Introspection Defense** | ✅ Memory Encrypted | ❌ RAM Vulnerable | ✅ Memory Encrypted | ✅ Hardware Isolated |
-| **PQC Algorithms** | ⚠️ Experimental | ❌ None | ⚠️ Add-on | ❌ None |
-| **Zero-Knowledge Proofs** | ✅ Schnorr & Bulletproofs | ❌ None | ❌ None | ❌ None |
-| **NIST CMVP Cert** | ❌ Self-Aligned | ⚠️ Enterprise FIPS | ✅ FIPS 140-2 L3 | ✅ FIPS 140-2 L3 |
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                               100% RUST-NATIVE `traces-sm` WORKSPACE                             │
+│                                                                                                  │
+│  User & Client Interfaces                                                                        │
+│  ┌──────────────────────────┐  ┌──────────────────────────────┐  ┌─────────────────────────────┐  │
+│  │ Rust WebAssembly Web GUI │  │ Rust Native Desktop App      │  │ Rust Native CLI Tool        │  │
+│  │ (`gui/` -> Yew 0.21 WASM)│  │ (`desktop/` -> Ubuntu, Win,  │  │ (`cli/` -> Multi-OS Distros)│  │
+│  │                          │  │  macOS via `eframe`/`egui`)  │  │                             │  │
+│  └────────────┬─────────────┘  └──────────────┬───────────────┘  └──────────────┬──────────────┘  │
+│               │                               │                                 │                │
+├───────────────┼───────────────────────────────┼─────────────────────────────────┼────────────────┤
+│ Host Layer (Untrusted Proxy)                  │                                 │                │
+│               └───────────────────────────────┼─────────────────────────────────┘                │
+│                                               │ REST / mTLS                                      │
+│  ┌────────────────────────────────────────────▼───────────────────────────────────────────────┐  │
+│  │ Rust Native Host Proxy (`host/` -> Axum 0.7 + Tokio + Rusqlite)                            │  │
+│  │ • Serves WebAssembly Web GUI static assets on port 8080                                    │  │
+│  │ • Manages SQLite metadata DB, audit logs, and DKG topology                                  │  │
+│  └────────────────────────────────────────────┬───────────────────────────────────────────────┘  │
+├───────────────────────────────────────────────┼──────────────────────────────────────────────────┤
+│ SGX Enclave Layer (Trusted EPC)               │ Plain TCP / mTLS (Port 8443)                     │
+│  ┌────────────────────────────────────────────▼───────────────────────────────────────────────┐  │
+│  │ Rust SGX Enclave (`enclave/` -> Fortanix EDP `x86_64-fortanix-unknown-sgx`)               │  │
+│  │ • In-Enclave Key Generation Catalog Engine (`keygen.rs`)                                   │  │
+│  │ • Mandatory NIST Security Policy Engine (`policy.rs`)                                      │  │
+│  │ • NIST SP 800-90A/B/C Entropy & DRBG Engine (`drbg.rs`)                                    │  │
+│  │ • NIST SP 800-57 Key Lifecycle State Machine (`nist.rs`)                                   │  │
+│  │ • Classic (RSA/ECDSA/Ed25519) + PQC (ML-KEM/ML-DSA) Engines (`keygen.rs`, `pqc.rs`)        │  │
+│  │ • Threshold DKG (Shamir SSS / Pedersen VSS) & PHE (`dkg.rs`, `paillier.rs`)               │  │
+│  │ • Zero-Knowledge Proofs (Schnorr PoK & Bulletproof Range Proofs) (`zkp/`)                  │  │
+│  │ • FIPS 140-3 Zeroization & NIST SP 800-88 Crypto-Shredding (`store.rs`)                    │  │
+│  └────────────────────────────────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔑 Key Generation & Algorithm Catalog
+
+| Algorithm Family | Supported Key Generation Schemes | Status | Standard / Spec |
+|---|---|---|---|
+| **RSA** | RSA-2048, RSA-4096 | ✅ Implemented | FIPS 186-5 / OAEP |
+| **ECDSA** | P-256, P-384, P-521, Secp256k1 | ✅ Implemented | FIPS 186-5 / SECG |
+| **Ed25519 / X25519** | Ed25519, X25519 | ✅ Implemented | RFC 8032 / RFC 7748 |
+| **Post-Quantum (PQC)**| ML-KEM-768/1024, ML-DSA-3/5, SLH-DSA | ⚠️ Experimental | FIPS 203 / 204 / 205 |
+| **Symmetric & Key Wrap**| AES-128/256-GCM, AES-KW | ✅ Implemented | SP 800-38D / SP 800-38F |
+| **Threshold DKG** | Shamir SSS, Pedersen VSS, FROST | ⚠️ Partial | RFC 9591 / DKLs23 |
+| **SSL/TLS & PKI** | X.509 Cert Bundles, OpenSSH KeyPairs | ✅ Implemented | RFC 5280 / OpenSSH |
 
 ---
 
@@ -59,33 +110,6 @@ cd ../host && cargo run --release
 
 ---
 
-## 🔑 Key Generation & Algorithm Catalog
-
-| Algorithm Family | Supported Key Generation Schemes | Status | Standard / Spec |
-|---|---|---|---|
-| **RSA** | RSA-2048, RSA-4096 | ✅ Implemented | FIPS 186-5 / OAEP |
-| **ECDSA** | P-256, P-384, P-521, Secp256k1 | ✅ Implemented | FIPS 186-5 / SECG |
-| **Ed25519 / X25519** | Ed25519, X25519 | ✅ Implemented | RFC 8032 / RFC 7748 |
-| **Post-Quantum (PQC)**| ML-KEM-768/1024, ML-DSA-3/5, SLH-DSA | ⚠️ Experimental | FIPS 203 / 204 / 205 |
-| **Symmetric & Key Wrap**| AES-128/256-GCM, AES-KW | ✅ Implemented | SP 800-38D / SP 800-38F |
-| **Threshold DKG** | Shamir SSS, Pedersen VSS, FROST | ⚠️ Partial | RFC 9591 / DKLs23 |
-| **SSL/TLS & PKI** | X.509 Cert Bundles, OpenSSH KeyPairs | ✅ Implemented | RFC 5280 / OpenSSH |
-
----
-
-## ❓ Frequently Asked Questions (FAQ)
-
-### Is there an open-source secrets manager that runs inside an Intel SGX enclave?
-Yes. `traces-sm` is an open-source, 100% Rust-native key and secret management framework that isolates cryptographic operations inside an Intel SGX Enclave Page Cache (EPC) on Fortanix EDP.
-
-### How does `traces-sm` differ from HashiCorp Vault or OpenBao?
-HashiCorp Vault and OpenBao store encrypted secrets on disk, but process plaintext secrets in standard host RAM. `traces-sm` executes decryption, signing, and key generation inside hardware-encrypted SGX memory.
-
-### How does `traces-sm` handle memory zeroization in Rust?
-All private key byte vectors wrap in `zeroize::Zeroizing<T>`. On drop, compiler intrinsics volatile-overwrite memory registers with zero bytes.
-
----
-
 ## 📚 Documentation Directory (`docs/`)
 
 - [**Status & Maturity**](docs/STATUS.md)
@@ -97,7 +121,3 @@ All private key byte vectors wrap in `zeroize::Zeroizing<T>`. On drop, compiler 
 - [**Conformance Report**](docs/CONFORMANCE_REPORT.md)
 - [**Page-by-Page UI/UX Design**](docs/PAGE_BY_PAGE_DESIGN.md)
 - [**Windows Build Guide**](docs/WINDOWS_BUILD_GUIDE.md)
-- [**FAQ**](docs/FAQ.md)
-- [**Comparison**](docs/COMPARISON.md)
-- [**Attestation & DCAP**](docs/ATTESTATION.md)
-- [**100-Repo Knowledge Bank**](docs/KNOWLEDGE_BANK.md)

@@ -1,0 +1,73 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="100%" height="100%">
+  <rect width="1200" height="675" fill="#030712" rx="12" />
+  <rect x="0" y="0" width="1200" height="50" fill="#0f172a" rx="12" />
+  <line x1="0" y1="50" x2="1200" y2="50" stroke="#1e293b" stroke-width="1" />
+  <text x="20" y="31" fill="#f8fafc" font-family="system-ui, sans-serif" font-weight="700" font-size="15">🔑 traces-sm — NIST SP 800-57 Key Lifecycle Matrix</text>
+
+  <!-- Main Table View -->
+  <rect x="245" y="80" width="690" height="380" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+  <text x="260" y="110" fill="#94a3b8" font-family="monospace" font-size="11">KEY ALIAS &amp; ID      ALGORITHM     KEYUSAGE FLAGS      CRYPTOPERIOD VOL    NIST STATE      ACTIONS</text>
+  <line x1="245" y1="120" x2="935" y2="120" stroke="#1e293b" stroke-width="1" />
+
+  <!-- Row 1 -->
+  <text x="260" y="148" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="600" font-size="13">rsa-master-cert</text>
+  <text x="260" y="162" fill="#64748b" font-family="monospace" font-size="10">k-101</text>
+  <text x="410" y="152" fill="#818cf8" font-family="monospace" font-size="12">RSA-4096</text>
+  <text x="510" y="152" fill="#cbd5e1" font-family="monospace" font-size="11">SIGN, VERIFY</text>
+  <text x="650" y="152" fill="#cbd5e1" font-family="monospace" font-size="11">1.2 GB / 4.2 GB</text>
+  <rect x="770" y="137" width="90" height="22" rx="4" fill="#064e3b" />
+  <text x="778" y="152" fill="#34d399" font-family="monospace" font-weight="700" font-size="10">OPERATIONAL</text>
+  <rect x="870" y="137" width="50" height="22" rx="4" fill="#1e293b" />
+  <text x="878" y="152" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="10">Rotate</text>
+
+  <line x1="245" y1="175" x2="935" y2="175" stroke="#1e293b" stroke-width="1" />
+
+  <!-- Row 2 -->
+  <text x="260" y="203" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="600" font-size="13">ecdsa-token-sign</text>
+  <text x="260" y="217" fill="#64748b" font-family="monospace" font-size="10">k-102</text>
+  <text x="410" y="207" fill="#818cf8" font-family="monospace" font-size="12">ECDSA-P256</text>
+  <text x="510" y="207" fill="#cbd5e1" font-family="monospace" font-size="11">SIGN, VERIFY</text>
+  <text x="650" y="207" fill="#cbd5e1" font-family="monospace" font-size="11">450 MB / 4.2 GB</text>
+  <rect x="770" y="192" width="90" height="22" rx="4" fill="#064e3b" />
+  <text x="778" y="207" fill="#34d399" font-family="monospace" font-weight="700" font-size="10">OPERATIONAL</text>
+  <rect x="870" y="192" width="50" height="22" rx="4" fill="#1e293b" />
+  <text x="878" y="207" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="10">Rotate</text>
+
+  <line x1="245" y1="230" x2="935" y2="230" stroke="#1e293b" stroke-width="1" />
+
+  <!-- Row 3 -->
+  <text x="260" y="258" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="600" font-size="13">pqc-kyber-kem</text>
+  <text x="260" y="272" fill="#64748b" font-family="monospace" font-size="10">k-103</text>
+  <text x="410" y="262" fill="#c084fc" font-family="monospace" font-size="12">ML-KEM-768</text>
+  <text x="510" y="262" fill="#cbd5e1" font-family="monospace" font-size="11">KEY_WRAP</text>
+  <text x="650" y="262" fill="#cbd5e1" font-family="monospace" font-size="11">0 B / 4.2 GB</text>
+  <rect x="770" y="247" width="90" height="22" rx="4" fill="#312e81" />
+  <text x="775" y="262" fill="#c7d2fe" font-family="monospace" font-weight="700" font-size="9">PRE_OPERATIONAL</text>
+  <rect x="870" y="247" width="50" height="22" rx="4" fill="#4f46e5" />
+  <text x="875" y="262" fill="#ffffff" font-family="system-ui, sans-serif" font-size="10">Activate</text>
+
+  <line x1="245" y1="285" x2="935" y2="285" stroke="#1e293b" stroke-width="1" />
+
+  <!-- Row 4 -->
+  <text x="260" y="313" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="600" font-size="13">legacy-rsa-2048</text>
+  <text x="260" y="327" fill="#64748b" font-family="monospace" font-size="10">k-104</text>
+  <text x="410" y="317" fill="#818cf8" font-family="monospace" font-size="12">RSA-2048</text>
+  <text x="510" y="317" fill="#cbd5e1" font-family="monospace" font-size="11">DECRYPT_ONLY</text>
+  <text x="650" y="317" fill="#cbd5e1" font-family="monospace" font-size="11">4.2 GB / 4.2 GB</text>
+  <rect x="770" y="302" width="90" height="22" rx="4" fill="#7f1d1d" />
+  <text x="778" y="317" fill="#fca5a5" font-family="monospace" font-weight="700" font-size="10">DEACTIVATED</text>
+  <rect x="870" y="302" width="50" height="22" rx="4" fill="#b91c1c" />
+  <text x="880" y="317" fill="#ffffff" font-family="system-ui, sans-serif" font-size="10">Shred</text>
+
+  <!-- Selected Key Detail Box -->
+  <rect x="245" y="480" width="690" height="140" rx="10" fill="#0f172a" stroke="#b91c1c" stroke-width="1" />
+  <text x="260" y="505" fill="#f8fafc" font-family="system-ui, sans-serif" font-weight="700" font-size="13">SELECTED KEY DETAILS: legacy-rsa-2048 (k-104)</text>
+  <text x="260" y="530" fill="#fca5a5" font-family="monospace" font-size="11">NIST State: DEACTIVATED  |  Reason: Cryptoperiod volume limit reached (4.2 GB / 2^32 bytes limit)</text>
+  <text x="260" y="550" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="11">Policy Restriction: Operational signing disabled by policy.rs. Historical decryption permitted.</text>
+  
+  <rect x="260" y="570" width="180" height="32" rx="6" fill="#b91c1c" />
+  <text x="272" y="591" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="600" font-size="11">SP 800-88 Crypto-Shred</text>
+  
+  <rect x="450" y="570" width="140" height="32" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+  <text x="465" y="591" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="11">Export Public PEM</text>
+</svg>
