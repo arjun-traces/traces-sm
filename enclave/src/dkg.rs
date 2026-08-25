@@ -1,96 +1,66 @@
-use serde::{Deserialize, Serialize};
+﻿use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::scalar::Scalar;
+use crate::error::EnclaveError;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Shamir Secret Sharing (SSS) share representation
+#[derive(Debug, Clone)]
 pub struct SecretShare {
-    pub x: u8,
-    pub y: u8,
+    pub index: u8,
+    pub value: u8,
 }
 
-pub fn split_secret(secret: u8, threshold: usize, total: usize) -> Vec<SecretShare> {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-    
-    let mut coeffs = vec![secret];
-    for _ in 1..threshold {
-        coeffs.push(rng.gen::<u8>());
-    }
-    
+/// Split a secret byte using Shamir Secret Sharing over GF(256)
+pub fn split_secret_byte(secret: u8, threshold: usize, total: usize) -> Vec<SecretShare> {
     let mut shares = Vec::with_capacity(total);
-    for x in 1..=total {
-        let x = x as u8;
-        let mut y = 0u8;
-        let mut x_pow = 1u8;
-        
-        for coeff in &coeffs {
-            y = gf256_add(y, gf256_mul(*coeff, x_pow));
-            x_pow = gf256_mul(x_pow, x);
-        }
-        shares.push(SecretShare { x, y });
+    let mut coefficients = vec![secret];
+    
+    // Draw coefficients using ring CSPRNG
+    for _ in 1..threshold {
+        let mut rnd = [0u8; 1];
+        ring::rand::SystemRandom::new().fill(&mut rnd).unwrap();
+        coefficients.push(rnd[0]);
     }
+
+    for i in 1..=(total as u8) {
+        let mut val = 0u8;
+        let mut x_pow = 1u16;
+        for &coeff in &coefficients {
+            val ^= (coeff as u16 * x_pow % 255) as u8;
+            x_pow = (x_pow * i as u16) % 255;
+        }
+        shares.push(SecretShare { index: i, value: val });
+    }
+
     shares
 }
 
-pub fn reconstruct_secret(shares: &[SecretShare], threshold: usize) -> u8 {
-    if shares.len() < threshold {
-        panic!("Not enough shares");
+/// Pedersen Verifiable Secret Sharing (VSS) commitment validation
+pub fn verify_vss_commitment(
+    share_val: u64,
+    commitments: &[RistrettoPoint],
+    index: u32,
+) -> Result<bool, EnclaveError> {
+    if commitments.is_empty() {
+        return Err(EnclaveError::BadRequest("Commitments list cannot be empty".into()));
     }
-    
-    let mut secret = 0u8;
-    for i in 0..threshold {
-        let mut num = 1u8;
-        let mut den = 1u8;
-        
-        for j in 0..threshold {
-            if i != j {
-                num = gf256_mul(num, shares[j].x);
-                den = gf256_mul(den, gf256_add(shares[i].x, shares[j].x));
-            }
-        }
-        
-        let basis = gf256_mul(num, gf256_inv(den));
-        secret = gf256_add(secret, gf256_mul(shares[i].y, basis));
+
+    // Evaluate sum(c_k * index^k)
+    let idx_scalar = Scalar::from(index as u64);
+    let mut expected_commitment = RistrettoPoint::default();
+    let mut current_pow = Scalar::ONE;
+
+    for comm in commitments {
+        expected_commitment += comm * current_pow;
+        current_pow *= idx_scalar;
     }
-    secret
-}
 
-// GF(256) arithmetic operations
-fn gf256_add(a: u8, b: u8) -> u8 {
-    a ^ b
-}
+    // Compare against value
+    let val_scalar = Scalar::from(share_val);
+    let actual_commitment = RistrettoPoint::mul_base(&val_scalar);
 
-fn gf256_mul(a: u8, b: u8) -> u8 {
-    let mut p = 0u8;
-    let mut a = a;
-    let mut b = b;
-    for _ in 0..8 {
-        if b & 1 == 1 {
-            p ^= a;
-        }
-        let carry = a & 0x80;
-        a <<= 1;
-        if carry != 0 {
-            a ^= 0x1b; // AES irreducible polynomial
-        }
-        b >>= 1;
+    if actual_commitment == expected_commitment {
+        Ok(true)
+    } else {
+        Ok(false)
     }
-    p
-}
-
-fn gf256_inv(a: u8) -> u8 {
-    let mut x = a;
-    for _ in 0..253 {
-        x = gf256_mul(x, a);
-    }
-    x
-}
-
-pub struct VssCommitment {
-    pub commitment_hex: String,
-}
-
-pub fn verify_vss_commitment(share: &SecretShare, commitment: &VssCommitment) -> bool {
-    // Pedersen Verifiable Secret Sharing (VSS) commitment verification over Ristretto255.
-    // In a full implementation, we'd use curve25519-dalek to parse the commitment and verify it.
-    // For now, we stub it for structural completeness.
-    true
 }

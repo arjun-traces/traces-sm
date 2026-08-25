@@ -1,0 +1,28 @@
+﻿name: Continuous Integration
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Build Host, GUI, CLI & Desktop
+        run: cargo build --workspace --exclude sm-enclave
+      - name: Run Tests
+        run: cargo test --workspace --exclude sm-enclave

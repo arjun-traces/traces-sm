@@ -1,150 +1,49 @@
-﻿//! Enclave-wide error types.
-//!
-//! All error variants are designed to be safe to surface to callers:
-//! they MUST NOT embed raw secret material, private key bytes, or
-//! plaintext values in their messages.
+﻿use thiserror::Error;
 
-use thiserror::Error;
-
-#[derive(Debug, Error)]
+#[derive(Error, Debug)]
 pub enum EnclaveError {
-    // ------------------------------------------------------------------
-    // Sealing / unsealing
-    // ------------------------------------------------------------------
-    #[error("sealing error: {msg}")]
-    Sealing { msg: &'static str },
+    #[error("Sealing error: {0}")]
+    SealingError(String),
 
-    #[error("unsealing error: {msg}")]
-    Unsealing { msg: &'static str },
+    #[error("Crypto error: {0}")]
+    CryptoError(String),
 
-    // ------------------------------------------------------------------
-    // Symmetric crypto
-    // ------------------------------------------------------------------
-    #[error("AES-GCM encryption failed")]
-    AesGcmEncrypt,
+    #[error("Storage error: {0}")]
+    StorageError(String),
 
-    #[error("AES-GCM decryption failed (authentication tag mismatch)")]
-    AesGcmDecrypt,
+    #[error("ZKP error: {0}")]
+    ZkpError(String),
 
-    #[error("HKDF key derivation failed: {0}")]
-    Hkdf(String),
+    #[error("HE error: {0}")]
+    HeError(String),
 
-    // ------------------------------------------------------------------
-    // Asymmetric key operations
-    // ------------------------------------------------------------------
-    #[error("key generation failed: {0}")]
-    KeyGen(String),
+    #[error("Authentication error: {0}")]
+    AuthError(String),
 
-    #[error("signing failed: {0}")]
-    Sign(String),
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
 
-    #[error("signature verification failed")]
-    Verify,
+    #[error("Resource not found: {0}")]
+    NotFound(String),
 
-    #[error("RSA encryption failed: {0}")]
-    RsaEncrypt(String),
+    #[error("Unauthorized access: {0}")]
+    Unauthorized(String),
 
-    #[error("RSA decryption failed: {0}")]
-    RsaDecrypt(String),
-
-    #[error("unsupported algorithm: {0}")]
-    UnsupportedAlgorithm(String),
-
-    // ------------------------------------------------------------------
-    // ZKP
-    // ------------------------------------------------------------------
-    #[error("ZKP proof generation failed: {0}")]
-    ZkpProve(String),
-
-    #[error("ZKP proof verification failed")]
-    ZkpVerify,
-
-    #[error("ZKP invalid input: {0}")]
-    ZkpInvalidInput(String),
-
-    // ------------------------------------------------------------------
-    // Homomorphic Encryption
-    // ------------------------------------------------------------------
-    #[error("HE key generation failed: {0}")]
-    HeKeyGen(String),
-
-    #[error("HE encryption failed: {0}")]
-    HeEncrypt(String),
-
-    #[error("HE decryption failed: {0}")]
-    HeDecrypt(String),
-
-    #[error("HE operation failed: {0}")]
-    HeOperation(String),
-
-    // ------------------------------------------------------------------
-    // Storage
-    // ------------------------------------------------------------------
-    #[error("storage I/O error: {0}")]
-    Storage(String),
-
-    #[error("secret not found: {id}")]
-    NotFound { id: String },
-
-    #[error("secret already exists: {id}")]
-    AlreadyExists { id: String },
-
-    // ------------------------------------------------------------------
-    // Authentication / authorization
-    // ------------------------------------------------------------------
-    #[error("unauthorized")]
-    Unauthorized,
-
-    #[error("token expired")]
-    TokenExpired,
-
-    #[error("token revoked")]
-    TokenRevoked,
-
-    #[error("insufficient scope: required '{required}'")]
-    InsufficientScope { required: String },
-
-    // ------------------------------------------------------------------
-    // HTTP / protocol
-    // ------------------------------------------------------------------
-    #[error("bad request: {0}")]
+    #[error("Bad request: {0}")]
     BadRequest(String),
 
-    #[error("JSON serialization error: {0}")]
-    Json(String),
+    #[error("Key generation failed: {0}")]
+    KeyGenFailed(String),
 
-    #[error("TLS error: {0}")]
-    Tls(String),
+    #[error("RSA encryption failed: {0}")]
+    RsaEncryptFailed(String),
 
-    // ------------------------------------------------------------------
-    // Internal / catchall
-    // ------------------------------------------------------------------
-    #[error("internal error")]
-    Internal,
-}
+    #[error("RSA decryption failed: {0}")]
+    RsaDecryptFailed(String),
 
-impl From<serde_json::Error> for EnclaveError {
-    fn from(e: serde_json::Error) -> Self {
-        EnclaveError::Json(e.to_string())
-    }
-}
+    #[error("Feature not implemented: {0}")]
+    NotImplemented(String),
 
-impl From<std::io::Error> for EnclaveError {
-    fn from(e: std::io::Error) -> Self {
-        EnclaveError::Storage(e.to_string())
-    }
-}
-
-/// HTTP status code for a given error.
-pub fn http_status(e: &EnclaveError) -> u16 {
-    match e {
-        EnclaveError::NotFound { .. } => 404,
-        EnclaveError::Unauthorized
-        | EnclaveError::TokenExpired
-        | EnclaveError::TokenRevoked => 401,
-        EnclaveError::InsufficientScope { .. } => 403,
-        EnclaveError::BadRequest(_) => 400,
-        EnclaveError::AlreadyExists { .. } => 409,
-        _ => 500,
-    }
+    #[error("Internal enclave error: {0}")]
+    Internal(String),
 }
