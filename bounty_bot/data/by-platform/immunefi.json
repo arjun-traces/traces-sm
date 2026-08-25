@@ -1,0 +1,37 @@
+[
+  {
+    "id": "ethereum-immunefi",
+    "name": "Ethereum Foundation Bug Bounty",
+    "organization": "Ethereum Foundation",
+    "platform": "Immunefi",
+    "program_type": "Bug Bounty",
+    "url": "https://immunefi.com/bounty/ethereum/",
+    "policy_url": "https://bounty.ethereum.org/",
+    "max_bounty_usd": 250000.0,
+    "min_bounty_usd": 2000.0,
+    "reward_types": [
+      "Cash",
+      "Tokens"
+    ],
+    "scope_summary": [
+      "Execution Specs",
+      "Consensus Specs",
+      "Go-Ethereum (geth)",
+      "Lighthouse"
+    ],
+    "out_of_scope_summary": [
+      "Third-party layer 2s",
+      "User interface bugs"
+    ],
+    "contact_email": "bounty@ethereum.org",
+    "security_txt_url": null,
+    "tags": [
+      "Web3",
+      "Blockchain",
+      "Smart Contracts",
+      "Cryptography"
+    ],
+    "status": "Active",
+    "last_updated": "2026-08-25T17:37:43.222306+00:00"
+  }
+]

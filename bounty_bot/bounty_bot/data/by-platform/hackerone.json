@@ -1,0 +1,146 @@
+[
+  {
+    "id": "github-bug-bounty",
+    "name": "GitHub Bug Bounty",
+    "organization": "GitHub",
+    "platform": "HackerOne",
+    "program_type": "Bug Bounty",
+    "url": "https://hackerone.com/github",
+    "policy_url": "https://bounty.github.com/",
+    "max_bounty_usd": 30000.0,
+    "min_bounty_usd": 617.0,
+    "reward_types": [
+      "Cash",
+      "Swag",
+      "Hall of Fame"
+    ],
+    "scope_summary": [
+      "github.com",
+      "GitHub Enterprise",
+      "GitHub Actions",
+      "GitHub API"
+    ],
+    "out_of_scope_summary": [
+      "Spam",
+      "Social engineering",
+      "Outdated third-party packages"
+    ],
+    "contact_email": "support@github.com",
+    "security_txt_url": "https://github.com/.well-known/security.txt",
+    "tags": [
+      "Web",
+      "Developer Tools",
+      "Cloud"
+    ],
+    "status": "Active",
+    "last_updated": "2026-08-25T17:37:43.222289+00:00"
+  },
+  {
+    "id": "hackerone-vercel_sandbox",
+    "name": "Vercel Sandbox (HackerOne)",
+    "organization": "Vercel Sandbox",
+    "platform": "HackerOne",
+    "program_type": "Bug Bounty",
+    "url": "https://hackerone.com/vercel_sandbox",
+    "policy_url": "https://hackerone.com/vercel_sandbox",
+    "max_bounty_usd": 10000.0,
+    "min_bounty_usd": null,
+    "reward_types": [
+      "Cash",
+      "Swag"
+    ],
+    "scope_summary": [
+      "*.vercel_sandbox.com"
+    ],
+    "out_of_scope_summary": [],
+    "contact_email": null,
+    "security_txt_url": null,
+    "tags": [
+      "Web",
+      "HackerOne"
+    ],
+    "status": "Active",
+    "last_updated": "2026-08-25T17:37:43.924971+00:00"
+  },
+  {
+    "id": "hackerone-wolt",
+    "name": "Wolt (HackerOne)",
+    "organization": "Wolt",
+    "platform": "HackerOne",
+    "program_type": "Bug Bounty",
+    "url": "https://hackerone.com/wolt",
+    "policy_url": "https://hackerone.com/wolt",
+    "max_bounty_usd": 10000.0,
+    "min_bounty_usd": null,
+    "reward_types": [
+      "Cash",
+      "Swag"
+    ],
+    "scope_summary": [
+      "*.wolt.com"
+    ],
+    "out_of_scope_summary": [],
+    "contact_email": null,
+    "security_txt_url": null,
+    "tags": [
+      "Web",
+      "HackerOne"
+    ],
+    "status": "Active",
+    "last_updated": "2026-08-25T17:37:43.925035+00:00"
+  },
+  {
+    "id": "hackerone-agoda-public",
+    "name": "Agoda Public (HackerOne)",
+    "organization": "Agoda Public",
+    "platform": "HackerOne",
+    "program_type": "Bug Bounty",
+    "url": "https://hackerone.com/agoda-public",
+    "policy_url": "https://hackerone.com/agoda-public",
+    "max_bounty_usd": 10000.0,
+    "min_bounty_usd": null,
+    "reward_types": [
+      "Cash",
+      "Swag"
+    ],
+    "scope_summary": [
+      "*.agoda-public.com"
+    ],
+    "out_of_scope_summary": [],
+    "contact_email": null,
+    "security_txt_url": null,
+    "tags": [
+      "Web",
+      "HackerOne"
+    ],
+    "status": "Active",
+    "last_updated": "2026-08-25T17:37:43.925053+00:00"
+  },
+  {
+    "id": "hackerone-coupang_tw",
+    "name": "Coupang Taiwan (HackerOne)",
+    "organization": "Coupang Taiwan",
+    "platform": "HackerOne",
+    "program_type": "Bug Bounty",
+    "url": "https://hackerone.com/coupang_tw",
+    "policy_url": "https://hackerone.com/coupang_tw",
+    "max_bounty_usd": 10000.0,
+    "min_bounty_usd": null,
+    "reward_types": [
+      "Cash",
+      "Swag"
+    ],
+    "scope_summary": [
+      "*.coupang_tw.com"
+    ],
+    "out_of_scope_summary": [],
+    "contact_email": null,
+    "security_txt_url": null,
+    "tags": [
+      "Web",
+      "HackerOne"
+    ],
+    "status": "Active",
+    "last_updated": "2026-08-25T17:37:43.925069+00:00"
+  }
+]

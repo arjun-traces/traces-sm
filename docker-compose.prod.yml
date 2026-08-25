@@ -1,0 +1,29 @@
+﻿version: '3.8'
+
+services:
+  enclave:
+    image: fortanix/rust-sgx:latest
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./enclave-store:/store
+      - /var/run/aesmd:/var/run/aesmd
+    devices:
+      - /dev/sgx_enclave
+      - /dev/sgx_provision
+    environment:
+      - SGX_MODE=HW
+      - SM_STORE_PATH=/store
+    command: ["ftxsgx-runner", "/app/traces-sm-enclave.sgxs"]
+
+  host:
+    build: ./host
+    ports:
+      - "8080:8080"
+    depends_on:
+      - enclave
+    environment:
+      - ENCLAVE_URL=https://enclave:8443
+      - ENCLAVE_TLS_VERIFY=true
+      - DATABASE_URL=postgresql://user:pass@db:5432/sm
+

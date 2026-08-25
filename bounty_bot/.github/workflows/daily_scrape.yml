@@ -1,0 +1,41 @@
+name: Daily Security Bounty Aggregation & Bot Sync
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at 00:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scrape-and-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install uv and Setup Python
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install Dependencies
+        run: |
+          cd bounty_bot
+          uv sync
+
+      - name: Run Bounty Bot Discovery & Sync
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          cd bounty_bot
+          uv run python -m src.main
+
+      - name: Commit and Push Updated Bounties & README
+        run: |
+          git config --global user.name "Bounty-Bot[bot]"
+          git config --global user.email "bounty-bot@users.noreply.github.com"
+          git add bounty_bot/data/ bounty_bot/README.md
+          git diff-index --quiet HEAD || (git commit -m "auto(bot): update vulnerability bounties directory and datasets [skip ci]" && git push)

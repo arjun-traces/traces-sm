@@ -1,0 +1,19 @@
+﻿# traces-sm
+
+> 100% Rust-Native Multi-OS NIST SP 800-57 SGX Secrets & Key Management Framework
+
+## Core Documentation
+- [Architecture Walkthrough](docs/ARCHITECTURE.md): Multi-crate workspace, host proxy, and SGX enclave layout.
+- [Technical Specification](docs/SPECIFICATION.md): NIST SP 800-57 lifecycle, PQC algorithms, and ZKP engine.
+- [CLI Reference](docs/CLI.md): Command-line syntax for keys, secrets, lifecycle, and DKG.
+- [Product Specification](docs/PRODUCT_SPECIFICATION.md): Product specification document and performance SLOs.
+- [Conformance Report](docs/CONFORMANCE_REPORT.md): Formal verification report proving 100% NIST compliance.
+- [Page-by-Page Design](docs/PAGE_BY_PAGE_DESIGN.md): UI/UX design specification and console screen layouts.
+- [Windows Build Guide](docs/WINDOWS_BUILD_GUIDE.md): Windows 10/11 desktop application build & packaging guide.
+
+## Workspace Crates
+- `enclave/`: Fortanix EDP Intel SGX enclave containing all cryptographic operations.
+- `host/`: Axum 0.7 proxy server managing SQLite metadata and static WebAssembly assets.
+- `cli/`: Multi-OS Clap command-line interface.
+- `gui/`: Yew WebAssembly web dashboard.
+- `desktop/`: Native eframe/egui UI for Ubuntu, Windows, and macOS.

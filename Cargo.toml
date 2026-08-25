@@ -1,0 +1,9 @@
+﻿[workspace]
+members = [
+    "enclave",
+    "host",
+    "gui",
+    "cli",
+    "desktop",
+]
+resolver = "2"

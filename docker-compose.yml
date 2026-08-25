@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  enclave:
+    image: fortanix/rust-sgx:latest
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./enclave-store:/store
+    environment:
+      - SGX_MODE=SIM
+      - SM_STORE_PATH=/store
+      - SM_SIM_SEED=dev-seed-do-not-use-in-prod
+    command: ["sh", "-c", "echo 'Simulated enclave running...' && sleep 3600"]
+    # In reality, this would run ftxsgx-runner
+
+  host:
+    build: ./host
+    ports:
+      - "8080:8080"
+    depends_on:
+      - enclave
+    environment:
+      - ENCLAVE_URL=https://enclave:8443
+      - ENCLAVE_TLS_VERIFY=false
+      - DATABASE_URL=sqlite:///./sm-metadata.db
