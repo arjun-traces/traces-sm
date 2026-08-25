@@ -1,0 +1,6 @@
+﻿title: "traces-sm — 100% Rust-Native SGX Secrets Manager"
+description: "Hardware-Enforced Multi-OS Key & Secret Management Framework Compliant with NIST SP 800-57 / SP 800-130 / FIPS 140-3"
+theme: jekyll-theme-cayman
+permalink: pretty
+show_downloads: true
+google_analytics:
