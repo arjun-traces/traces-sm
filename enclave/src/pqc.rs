@@ -18,6 +18,6 @@ pub fn ml_dsa_sign(_priv_key: &[u8], _message: &[u8]) -> Result<Vec<u8>, Enclave
 }
 
 pub fn ml_dsa_verify(_pub_key: &[u8], _message: &[u8], _signature: &[u8]) -> Result<bool, EnclaveError> {
-    // Explicitly do NOT return true unconditionally
+    // Explicitly return NotImplemented error (never return true unconditionally)
     Err(EnclaveError::NotImplemented("ML-DSA signature verification is experimental.".into()))
 }
