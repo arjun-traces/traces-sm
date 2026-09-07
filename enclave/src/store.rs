@@ -73,15 +73,29 @@ impl Store {
     /// Persist a new or updated secret record + its sealed blob.
     pub fn save(&self, record: &SecretRecord, blob: &[u8]) -> Result<(), EnclaveError> {
         let meta_json = serde_json::to_vec_pretty(record)?;
-        fs::write(self.meta_path(&record.id), &meta_json)?;
-        fs::write(self.blob_path(&record.id), blob)?;
+        let m_path = self.meta_path(&record.id);
+        let b_path = self.blob_path(&record.id);
+        fs::write(&m_path, &meta_json)?;
+        fs::write(&b_path, blob)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(&m_path, fs::Permissions::from_mode(0o600));
+            let _ = fs::set_permissions(&b_path, fs::Permissions::from_mode(0o600));
+        }
         Ok(())
     }
 
     /// Update only the metadata (e.g. after soft-delete or rotation).
     pub fn save_meta(&self, record: &SecretRecord) -> Result<(), EnclaveError> {
         let meta_json = serde_json::to_vec_pretty(record)?;
-        fs::write(self.meta_path(&record.id), &meta_json)?;
+        let m_path = self.meta_path(&record.id);
+        fs::write(&m_path, &meta_json)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(&m_path, fs::Permissions::from_mode(0o600));
+        }
         Ok(())
     }
 
@@ -142,11 +156,9 @@ impl Store {
             let entry = entry?;
             let path = entry.path();
             if path.extension().and_then(|e| e.to_str()) == Some("json") {
-                if let Ok(bytes) = fs::read(&path) {
-                    if let Ok(record) = serde_json::from_slice::<SecretRecord>(&bytes) {
-                        records.push(record);
-                    }
-                }
+                let bytes = fs::read(&path)?;
+                let record = serde_json::from_slice::<SecretRecord>(&bytes)?;
+                records.push(record);
             }
         }
         records.sort_by(|a, b| a.created_at.cmp(&b.created_at));
@@ -191,21 +203,26 @@ impl Store {
         let m = self.meta_path(id);
         let b = self.blob_path(id);
 
+        if !m.exists() && !b.exists() {
+            return Err(EnclaveError::NotFound { id: id.to_string() });
+        }
+
+        use ring::rand::{SecureRandom, SystemRandom};
         use std::fs::OpenOptions;
         use std::io::Write;
 
+        let rng = SystemRandom::new();
+
         for path in [&m, &b] {
             if path.exists() {
-                if let Ok(metadata) = fs::metadata(path) {
-                    let len = metadata.len();
-                    if let Ok(mut file) = OpenOptions::new().write(true).open(path) {
-                        // In a real SGX enclave we would get random bytes, here we use 0xFF or something similar
-                        let buf = vec![0xFF; len as usize];
-                        let _ = file.write_all(&buf);
-                        let _ = file.sync_all();
-                    }
-                }
-                let _ = fs::remove_file(path);
+                let metadata = fs::metadata(path)?;
+                let len = metadata.len() as usize;
+                let mut file = OpenOptions::new().write(true).open(path)?;
+                let mut buf = vec![0u8; len];
+                rng.fill(&mut buf).map_err(|_| EnclaveError::Internal)?;
+                file.write_all(&buf)?;
+                file.sync_all()?;
+                fs::remove_file(path)?;
             }
         }
         Ok(())

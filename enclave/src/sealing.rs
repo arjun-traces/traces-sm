@@ -80,6 +80,11 @@ impl SealingKeyProvider for SimSealingProvider {
             fs::write(&self.key_path, raw.as_ref()).map_err(|_| EnclaveError::Sealing {
                 msg: "cannot write sim key",
             })?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let _ = fs::set_permissions(&self.key_path, fs::Permissions::from_mode(0o600));
+            }
             log::info!(
                 "Simulation master sealing key created at {:?}",
                 self.key_path

@@ -87,7 +87,9 @@ pub fn decrypt_secret(
 
     // 1. Split the blob
     let sealed_dek = &blob[..SEALED_DEK_LEN];
-    debug_assert_eq!(blob[SEALED_DEK_LEN], SEPARATOR);
+    if blob[SEALED_DEK_LEN] != SEPARATOR {
+        return Err(EnclaveError::AesGcmDecrypt);
+    }
     let rest = &blob[SEALED_DEK_LEN + 1..];
     let (nonce_bytes_slice, ciphertext_with_tag) = rest.split_at(NONCE_LEN);
 
