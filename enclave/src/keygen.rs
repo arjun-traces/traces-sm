@@ -22,6 +22,18 @@ pub fn generate_keypair(
     Ok((pair.public_key_pem, pair.sealed_private_key))
 }
 
+fn wrap_pem(label: &str, raw_b64: &str) -> String {
+    let mut pem = format!("-----BEGIN {}-----\n", label);
+    for chunk in raw_b64.as_bytes().chunks(64) {
+        if let Ok(s) = std::str::from_utf8(chunk) {
+            pem.push_str(s);
+            pem.push('\n');
+        }
+    }
+    pem.push_str(&format!("-----END {}-----", label));
+    pem
+}
+
 pub fn generate_key_pair(
     algorithm: KeyAlgorithm,
     provider: &dyn SealingKeyProvider,
@@ -40,10 +52,25 @@ pub fn generate_key_pair(
         KeyAlgorithm::MlDsa3 | KeyAlgorithm::MlDsa5 => {
             generate_pqc_dsa(&algorithm.to_string(), provider)
         }
-        KeyAlgorithm::Aes256Gcm | KeyAlgorithm::Aes256Kw => {
+        KeyAlgorithm::Aes128Gcm | KeyAlgorithm::Aes128Kw => {
+            generate_symmetric(16, &algorithm.to_string(), provider)
+        }
+        KeyAlgorithm::Aes256Gcm | KeyAlgorithm::Aes256Kw | KeyAlgorithm::ChaCha20Poly1305 => {
             generate_symmetric(32, &algorithm.to_string(), provider)
         }
-        _ => generate_symmetric(32, &algorithm.to_string(), provider),
+        KeyAlgorithm::HmacSha256 => generate_symmetric(32, &algorithm.to_string(), provider),
+        KeyAlgorithm::HmacSha512 => generate_symmetric(64, &algorithm.to_string(), provider),
+        KeyAlgorithm::EcdsaP521
+        | KeyAlgorithm::X25519
+        | KeyAlgorithm::SlhDsa
+        | KeyAlgorithm::MlKem512 => Err(EnclaveError::NotImplemented(format!(
+            "Algorithm {} is not implemented",
+            algorithm
+        ))),
+        _ => Err(EnclaveError::UnsupportedAlgorithm(format!(
+            "Algorithm {} is not supported",
+            algorithm
+        ))),
     }
 }
 
@@ -107,10 +134,8 @@ fn generate_ecdsa_p256(
     .map_err(|_| EnclaveError::KeyGenFailed("ECDSA key parse failed".into()))?;
 
     let pub_bytes = key_pair.public_key().as_ref();
-    let public_key_pem = format!(
-        "-----BEGIN PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----",
-        base64::engine::general_purpose::STANDARD.encode(pub_bytes)
-    );
+    let b64 = base64::engine::general_purpose::STANDARD.encode(pub_bytes);
+    let public_key_pem = wrap_pem("PUBLIC KEY", &b64);
 
     let sealed_private_key = seal_data(pkcs8_bytes.as_ref(), "seal:ecdsa-privkey", provider)?;
 
@@ -136,10 +161,8 @@ fn generate_ecdsa_p384(
     .map_err(|_| EnclaveError::KeyGenFailed("ECDSA key parse failed".into()))?;
 
     let pub_bytes = key_pair.public_key().as_ref();
-    let public_key_pem = format!(
-        "-----BEGIN PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----",
-        base64::engine::general_purpose::STANDARD.encode(pub_bytes)
-    );
+    let b64 = base64::engine::general_purpose::STANDARD.encode(pub_bytes);
+    let public_key_pem = wrap_pem("PUBLIC KEY", &b64);
 
     let sealed_private_key = seal_data(pkcs8_bytes.as_ref(), "seal:ecdsa-privkey", provider)?;
 
@@ -166,10 +189,8 @@ fn generate_ed25519(provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPai
         .map_err(|_| EnclaveError::KeyGenFailed("Ed25519 key parse failed".into()))?;
 
     let pub_bytes = key_pair.public_key().as_ref();
-    let public_key_pem = format!(
-        "-----BEGIN PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----",
-        base64::engine::general_purpose::STANDARD.encode(pub_bytes)
-    );
+    let b64 = base64::engine::general_purpose::STANDARD.encode(pub_bytes);
+    let public_key_pem = wrap_pem("PUBLIC KEY", &b64);
 
     let sealed_private_key = seal_data(pkcs8_bytes.as_ref(), "seal:ed25519-privkey", provider)?;
 
@@ -201,7 +222,7 @@ fn generate_pqc_dsa(
 
 fn generate_symmetric(
     len: usize,
-    name: &str,
+    _name: &str,
     provider: &dyn SealingKeyProvider,
 ) -> Result<GeneratedKeyPair, EnclaveError> {
     let mut key_bytes = Zeroizing::new(vec![0u8; len]);
@@ -209,7 +230,7 @@ fn generate_symmetric(
         .fill(&mut key_bytes)
         .map_err(|_| EnclaveError::KeyGenFailed("Symmetric keygen failed".into()))?;
 
-    let public_key_pem = format!("SYMMETRIC_KEY_{}_LENGTH_{}B", name, len);
+    let public_key_pem = String::new();
     let sealed_private_key = seal_data(&key_bytes, "seal:symmetric-key", provider)?;
 
     Ok(GeneratedKeyPair {
