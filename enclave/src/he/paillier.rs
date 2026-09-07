@@ -214,6 +214,9 @@ fn mod_inverse(a: &BigUint, m: &BigUint) -> Option<BigUint> {
 
 /// L-function used in decryption:  L(u) = (u - 1) / n
 fn l_func(u: &BigUint, n: &BigUint) -> BigUint {
+    if u <= &BigUint::one() {
+        return BigUint::zero();
+    }
     (u - BigUint::one()) / n
 }
 
@@ -226,6 +229,12 @@ fn l_func(u: &BigUint, n: &BigUint) -> BigUint {
 /// `bits` is the desired bit-length of `n` (e.g. 2048).
 /// `p` and `q` will each be `bits/2` bits.
 pub fn generate_keypair(bits: usize) -> Result<PaillierKeyPair, EnclaveError> {
+    if bits < 512 {
+        return Err(EnclaveError::HeKeyGen(format!(
+            "Paillier key size {} is below minimum 512 bits (spec §4.3 recommends 2048)",
+            bits
+        )));
+    }
     let half = bits as u64 / 2;
 
     // Generate two distinct primes p, q
@@ -299,7 +308,7 @@ pub fn encrypt(pk: &PaillierPublicKey, m: &BigUint) -> Result<BigUint, EnclaveEr
 ///
 /// **MUST only run inside the enclave** — the private key never leaves EPC.
 pub fn decrypt(sk: &PaillierPrivateKey, c: &BigUint) -> Result<BigUint, EnclaveError> {
-    if c >= &sk.n_sq {
+    if c >= &sk.n_sq || c.is_zero() {
         return Err(EnclaveError::HeDecrypt("ciphertext out of range".into()));
     }
     // m = L(c^λ mod n²) · μ  mod n

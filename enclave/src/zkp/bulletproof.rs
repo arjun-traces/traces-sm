@@ -58,13 +58,13 @@ pub struct SerializedRangeProof {
 /// Returns a `SerializedRangeProof` that can be sent to an untrusted verifier
 /// without revealing `value`.
 pub fn prove_range(value: u64, min: u64, max: u64) -> Result<SerializedRangeProof, EnclaveError> {
+    if max < min {
+        return Err(EnclaveError::ZkpInvalidInput("max must be ≥ min".into()));
+    }
     if value < min || value > max {
         return Err(EnclaveError::ZkpInvalidInput(format!(
             "value {value} is not in [{min}, {max}]"
         )));
-    }
-    if max < min {
-        return Err(EnclaveError::ZkpInvalidInput("max must be ≥ min".into()));
     }
 
     // Shift: prove 0 ≤ (value - min) < 2^RANGE_BITS
@@ -84,6 +84,8 @@ pub fn prove_range(value: u64, min: u64, max: u64) -> Result<SerializedRangeProo
 
     let blinding = Scalar::random(&mut OsRng);
     let mut prover_transcript = Transcript::new(TRANSCRIPT_LABEL);
+    prover_transcript.append_u64(b"min", min);
+    prover_transcript.append_u64(b"max", max);
 
     let (proof, committed_value) = RangeProof::prove_single(
         &bp_gens,
@@ -142,6 +144,8 @@ pub fn verify_range_proof(proof: &SerializedRangeProof) -> Result<bool, EnclaveE
     let bp_gens = BulletproofGens::new(RANGE_BITS, 1);
 
     let mut verifier_transcript = Transcript::new(TRANSCRIPT_LABEL);
+    verifier_transcript.append_u64(b"min", proof.min);
+    verifier_transcript.append_u64(b"max", proof.max);
 
     match bp_proof.verify_single(
         &bp_gens,
