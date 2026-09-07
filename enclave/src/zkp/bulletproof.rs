@@ -67,17 +67,19 @@ pub fn prove_range(value: u64, min: u64, max: u64) -> Result<SerializedRangeProo
         )));
     }
 
-    // Shift: prove 0 ≤ (value - min) < 2^RANGE_BITS
-    let v_shifted = value
+    let range_span = max
         .checked_sub(min)
-        .ok_or_else(|| EnclaveError::ZkpInvalidInput("underflow in shift".into()))?;
-
-    // Verify the shifted value fits in RANGE_BITS
-    if v_shifted >= (1u64 << RANGE_BITS) {
+        .ok_or_else(|| EnclaveError::ZkpInvalidInput("underflow in range span".into()))?;
+    if range_span >= (1u64 << RANGE_BITS) {
         return Err(EnclaveError::ZkpInvalidInput(format!(
             "range [{min}, {max}] exceeds 2^{RANGE_BITS}"
         )));
     }
+
+    // Shift: prove 0 ≤ (value - min) < 2^RANGE_BITS
+    let v_shifted = value
+        .checked_sub(min)
+        .ok_or_else(|| EnclaveError::ZkpInvalidInput("underflow in shift".into()))?;
 
     let pc_gens = PedersenGens::default();
     let bp_gens = BulletproofGens::new(RANGE_BITS, 1);
