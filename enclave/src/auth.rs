@@ -26,6 +26,7 @@ use crate::sealing::{seal, unseal, SealingKeyProvider};
 
 const SEALING_PURPOSE: &str = "seal:token-signing-key";
 const KEY_FILE: &str = "token_signing_key.sealed";
+const REVOKED_FILE: &str = "revoked_tokens.json";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // JWT claims
@@ -82,10 +83,20 @@ impl EnclaveTokenService {
             (sealed, pub_b)
         };
 
+        let rev_path = std::path::Path::new(store_path).join(REVOKED_FILE);
+        let revoked_set: HashSet<String> = if rev_path.exists() {
+            std::fs::read_to_string(&rev_path)
+                .ok()
+                .and_then(|s| serde_json::from_str(&s).ok())
+                .unwrap_or_default()
+        } else {
+            HashSet::new()
+        };
+
         Ok(Self {
             sealed_priv,
             pub_bytes,
-            revoked: Arc::new(Mutex::new(HashSet::new())),
+            revoked: Arc::new(Mutex::new(revoked_set)),
             store_path: store_path.to_string(),
         })
     }
@@ -144,9 +155,14 @@ impl EnclaveTokenService {
         Ok(claims)
     }
 
-    /// Add a JTI to the in-memory revocation list.
+    /// Add a JTI to the revocation list and persist it.
     pub fn revoke_token(&self, jti: &str) {
-        self.revoked.lock().unwrap().insert(jti.to_string());
+        let mut lock = self.revoked.lock().unwrap();
+        lock.insert(jti.to_string());
+        let rev_path = std::path::Path::new(&self.store_path).join(REVOKED_FILE);
+        if let Ok(json) = serde_json::to_string(&*lock) {
+            let _ = std::fs::write(rev_path, json);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────

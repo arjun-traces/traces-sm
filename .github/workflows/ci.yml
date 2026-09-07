@@ -173,7 +173,8 @@ jobs:
       - name: Setup Nightly Rust Toolchain
         uses: dtolnay/rust-toolchain@nightly
         with:
-          components: rust-src
+          targets: x86_64-unknown-linux-gnu
+          components: rust-src, llvm-tools-preview
 
       - name: Cache Cargo & Fuzz Dependencies
         uses: Swatinem/rust-cache@v2
@@ -184,13 +185,46 @@ jobs:
           tool: cargo-fuzz
 
       - name: Fuzz ASN.1 / PKCS#8 Key Parsing
-        run: cargo +nightly fuzz run fuzz_asn1 -- -max_total_time=15 -max_len=4096
+        run: cargo +nightly fuzz run --target x86_64-unknown-linux-gnu fuzz_asn1 -- -max_total_time=15 -max_len=4096
 
       - name: Fuzz JSON-RPC & REST Deserialization
-        run: cargo +nightly fuzz run fuzz_json_rpc -- -max_total_time=15 -max_len=8192
+        run: cargo +nightly fuzz run --target x86_64-unknown-linux-gnu fuzz_json_rpc -- -max_total_time=15 -max_len=8192
 
       - name: Fuzz Base64 & Base64URL Decoders
-        run: cargo +nightly fuzz run fuzz_base64 -- -max_total_time=15 -max_len=4096
+        run: cargo +nightly fuzz run --target x86_64-unknown-linux-gnu fuzz_base64 -- -max_total_time=15 -max_len=4096
+
+  # ---------------------------------------------------------------------------
+  # Web GUI & UI Test Suite (React / Vite / Vitest)
+  # ---------------------------------------------------------------------------
+  web-gui-tests:
+    name: Web GUI — Build & UI Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: gui/package-lock.json
+
+      - name: Install GUI Dependencies
+        run: |
+          cd gui
+          npm ci
+
+      - name: Run React UI Test Suite
+        run: |
+          cd gui
+          npm test
+
+      - name: Build Web GUI Frontend
+        run: |
+          cd gui
+          npm run build
+
 
 
 
