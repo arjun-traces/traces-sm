@@ -105,7 +105,12 @@ impl Default for CryptoPeriod {
 
 impl CryptoPeriod {
     pub fn process(&mut self, bytes: u64) -> bool {
-        self.bytes_processed += bytes;
-        self.bytes_processed <= self.max_bytes
+        let new_total = self.bytes_processed.saturating_add(bytes);
+        if new_total <= self.max_bytes {
+            self.bytes_processed = new_total;
+            true
+        } else {
+            false
+        }
     }
 }

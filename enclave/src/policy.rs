@@ -61,7 +61,7 @@ impl PolicyEngine {
     /// Validate cryptoperiod byte limits (NIST SP 800-57)
     pub fn validate_cryptoperiod(&self, bytes_processed: u64) -> Result<(), EnclaveError> {
         if self.policy.enforce_cryptoperiod_limit
-            && bytes_processed >= self.policy.max_cryptoperiod_bytes
+            && bytes_processed > self.policy.max_cryptoperiod_bytes
         {
             return Err(EnclaveError::BadRequest(
                 "NIST Cryptoperiod Exceeded: Key must be rekeyed or rotated before further encryption.".into()
