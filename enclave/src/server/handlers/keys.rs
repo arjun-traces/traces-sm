@@ -1,4 +1,11 @@
-//! Key pair operation handlers.
+//! Asymmetric and Symmetric Key Lifecycle and Cryptographic Operation Handlers.
+//!
+//! # Capabilities
+//! Handles in-enclave cryptographic operations:
+//! - **Key Generation**: RSA (2048/4096), ECDSA (P-256/P-384), Ed25519, and FROST Ed25519.
+//! - **Digital Signatures**: In-enclave signing with sealed private keys and public verification.
+//! - **Envelope & RSA OAEP Encryption**: Public encryption and in-enclave hardware-sealed decryption.
+//! - **Key Rotation & Destruction**: Versioned keypair rotation and hard deletion.
 
 use base64::Engine as _;
 use chrono::Utc;
@@ -16,6 +23,7 @@ use crate::server::router::HttpRequest;
 use crate::server::EnclaveState;
 use crate::store::SecretRecord;
 
+/// Handles generation of an asymmetric keypair, immediately sealing the private key to persistent storage.
 pub fn generate(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -72,6 +80,7 @@ pub fn generate(
     })?)
 }
 
+/// Lists all asymmetric key records stored in the enclave.
 pub fn list(
     _req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -94,6 +103,7 @@ pub fn list(
     Ok(serde_json::Value::Array(records))
 }
 
+/// Exports the public key PEM for a given asymmetric key ID.
 pub fn public_key(
     _req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -104,6 +114,7 @@ pub fn public_key(
     Ok(serde_json::json!({ "id": uuid, "public_key_pem": record.public_key_pem }))
 }
 
+/// Computes a digital signature over a message using the hardware-sealed private key.
 pub fn sign(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -136,6 +147,7 @@ pub fn sign(
     })?)
 }
 
+/// Verifies a digital signature against the stored public key.
 pub fn verify(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -163,6 +175,7 @@ pub fn verify(
     Ok(serde_json::to_value(VerifyResponse { valid })?)
 }
 
+/// Encrypts plaintext under an RSA public key using RSA-OAEP SHA-256.
 pub fn encrypt(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -185,6 +198,7 @@ pub fn encrypt(
     })?)
 }
 
+/// Decrypts RSA-OAEP ciphertext inside the enclave using the hardware-sealed private key.
 pub fn decrypt(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -206,6 +220,7 @@ pub fn decrypt(
     })?)
 }
 
+/// Rotates an existing keypair by generating a new version and updating storage atomically.
 pub fn rotate(
     _req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -238,6 +253,7 @@ pub fn rotate(
     }))
 }
 
+/// Hard-deletes a keypair and its sealed private key blob from storage.
 pub fn delete(
     _req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -247,3 +263,4 @@ pub fn delete(
     state.store.hard_delete(&uuid)?;
     Ok(serde_json::json!({ "id": uuid, "deleted": true }))
 }
+

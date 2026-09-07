@@ -1,13 +1,24 @@
-//! JWT token service — runs entirely inside the enclave.
+//! # In-Enclave JWT Token Authentication and Issuance Service
 //!
-//! On first start, generates an Ed25519 signing keypair, seals the private
-//! key to disk, and uses it for all subsequent token issuance.  Token JWTs
-//! are signed with EdDSA (Ed25519) and verified without leaving the EPC.
+//! This module implements hardware-bound JSON Web Token (JWT) issuance, cryptographic
+//! signature verification, and lifecycle management running strictly inside the Intel SGX enclave.
 //!
-//! Token structure:
-//!   Header : { "alg": "EdDSA", "typ": "JWT" }
-//!   Claims : { sub, iat, exp, jti, scopes }
-//!   Sig    : Ed25519 over base64url(header).base64url(payload)
+//! ## Architectural Invariants & Security Guarantees
+//!
+//! 1. **Zero-Leakage Private Key**:
+//!    - The token signing private key is generated inside the enclave using Ring's CSPRNG.
+//!    - When persisted, it is sealed using Intel SGX hardware-derived keys with purpose
+//!      `"seal:token-signing-key"`.
+//!    - When unsealed for signing operations, the raw PKCS#8 key buffer is wrapped in
+//!      [`zeroize::Zeroizing`] so that memory registers are zeroed immediately upon drop.
+//! 2. **Signature Verification without Unsealing**:
+//!    - The public key DER bytes are retained in enclave memory (`pub_bytes`), allowing
+//!      inbound JWT signature verification with zero decryption overhead or unsealing calls.
+//! 3. **Non-Replayability and Revocation**:
+//!    - Every token carries a unique UUID v4 JWT ID (`jti`) and Unix timestamp expiry (`exp`).
+//!    - Revoked tokens are tracked in an in-memory deny-list and persisted to `revoked_tokens.json`.
+//! 4. **EdDSA Signature Standard**:
+//!    - Tokens are signed using Ed25519 (RFC 8037) over `base64url(header).base64url(payload)`.
 
 use ring::signature::KeyPair;
 use std::collections::HashSet;
@@ -24,20 +35,31 @@ use zeroize::Zeroizing;
 use crate::error::EnclaveError;
 use crate::sealing::{seal, unseal, SealingKeyProvider};
 
+/// Hardware sealing purpose domain separation string for the token signing private key.
 const SEALING_PURPOSE: &str = "seal:token-signing-key";
+
+/// Filename for the hardware-sealed token signing key.
 const KEY_FILE: &str = "token_signing_key.sealed";
+
+/// Filename for the persisted token revocation deny-list.
 const REVOKED_FILE: &str = "revoked_tokens.json";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // JWT claims
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Standard JWT payload claims schema for enclave-authenticated sessions.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
+    /// Subject identifier (e.g. client ID, node ID, or service principal).
     pub sub: String,
+    /// Issued-at timestamp (Unix epoch seconds).
     pub iat: i64,
+    /// Expiration timestamp (Unix epoch seconds).
     pub exp: i64,
+    /// Unique JWT Identifier (UUID v4) used for revocation tracking and replay defense.
     pub jti: String,
+    /// Authorized capability scopes (e.g. `["keys:read", "secrets:write", "zkp:prove"]`).
     pub scopes: Vec<String>,
 }
 
@@ -45,19 +67,33 @@ pub struct Claims {
 // Token service
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Thread-safe in-enclave JWT token service managing signing, verification, and revocation.
 pub struct EnclaveTokenService {
-    /// Sealed PKCS#8 Ed25519 private key bytes.
+    /// Hardware-sealed PKCS#8 Ed25519 private key bytes.
     sealed_priv: Vec<u8>,
-    /// DER-encoded public key bytes (for verification without unsealing).
+    /// DER-encoded public key bytes for fast in-enclave signature verification.
     pub_bytes: Vec<u8>,
-    /// In-memory deny-list of revoked token JTIs.
+    /// Thread-safe in-memory deny-list of revoked token JTIs.
     revoked: Arc<Mutex<HashSet<String>>>,
-    /// Store path for persisting the sealed key.
+    /// Persistent directory path for sealed key storage and revocation state.
     store_path: String,
 }
 
 impl EnclaveTokenService {
-    /// Load or create the signing keypair.
+    /// Initializes or loads the enclave token service.
+    ///
+    /// # Invariants & Workflow
+    /// 1. Checks if `token_signing_key.sealed` exists in `store_path`.
+    /// 2. If present, unseals the key using `provider` to verify public key derivation.
+    /// 3. If missing, generates a fresh Ed25519 keypair, seals the private key, and writes to disk.
+    /// 4. Loads any existing `revoked_tokens.json` into the thread-safe revocation set.
+    ///
+    /// # Arguments
+    /// * `store_path` - Filesystem path for persisted sealed artifacts.
+    /// * `provider` - Sealing key provider (SGX hardware root or mock provider).
+    ///
+    /// # Errors
+    /// Returns [`EnclaveError`] if sealing/unsealing fails or disk I/O errors occur.
     pub fn new(store_path: &str, provider: &dyn SealingKeyProvider) -> Result<Self, EnclaveError> {
         let key_path = std::path::Path::new(store_path).join(KEY_FILE);
 
@@ -101,7 +137,19 @@ impl EnclaveTokenService {
         })
     }
 
-    /// Issue a signed JWT.
+    /// Issues a signed JWT with the specified subject, scopes, and time-to-live.
+    ///
+    /// # Parameters
+    /// * `subject` - The authenticated entity name or client principal.
+    /// * `scopes` - List of permission scopes granted to the token.
+    /// * `ttl_secs` - Lifetime of the token in seconds.
+    /// * `provider` - Sealing provider used to temporarily unseal the signing private key.
+    ///
+    /// # Returns
+    /// A tuple of `(jti, compact_jwt_string)`.
+    ///
+    /// # Security Invariant
+    /// The private key is unsealed only during signing and immediately zeroized on scope exit.
     pub fn issue_token(
         &self,
         subject: &str,
@@ -123,7 +171,17 @@ impl EnclaveTokenService {
         Ok((jti, jwt))
     }
 
-    /// Verify a JWT and return its claims.
+    /// Verifies a compact JWT string against the enclave's public key and checks expiry & revocation.
+    ///
+    /// # Verification Steps
+    /// 1. Verifies 3-part `header.payload.signature` format.
+    /// 2. Performs constant-time Ed25519 signature verification against `pub_bytes`.
+    /// 3. Deserializes claims JSON payload.
+    /// 4. Verifies `exp > current_timestamp`.
+    /// 5. Validates `jti` is not present in the active revocation deny-list.
+    ///
+    /// # Returns
+    /// The verified [`Claims`] struct if valid.
     pub fn verify_token(&self, token: &str) -> Result<Claims, EnclaveError> {
         let parts: Vec<&str> = token.splitn(3, '.').collect();
         if parts.len() != 3 {
@@ -155,7 +213,10 @@ impl EnclaveTokenService {
         Ok(claims)
     }
 
-    /// Add a JTI to the revocation list and persist it.
+    /// Adds a token JTI to the revocation list and persists the updated deny-list to disk.
+    ///
+    /// # Side Effects
+    /// Updates in-memory `revoked` set and writes JSON state to `revoked_tokens.json`.
     pub fn revoke_token(&self, jti: &str) {
         let mut lock = self.revoked.lock().unwrap();
         lock.insert(jti.to_string());
@@ -169,6 +230,7 @@ impl EnclaveTokenService {
     // Internal
     // ─────────────────────────────────────────────────────────────────────
 
+    /// Signs a JWT claims structure using the unsealed Ed25519 signing key.
     fn sign_jwt(
         &self,
         claims: &Claims,
@@ -197,12 +259,15 @@ impl EnclaveTokenService {
 // Base64url helpers (no padding)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Encodes raw bytes to URL-safe base64 without padding (`=`).
 fn b64url_encode(data: &[u8]) -> String {
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(data)
 }
 
+/// Decodes URL-safe unpadded base64 to byte vector.
 fn b64url_decode(s: &str) -> Result<Vec<u8>, EnclaveError> {
     base64::engine::general_purpose::URL_SAFE_NO_PAD
         .decode(s)
         .map_err(|_| EnclaveError::Unauthorized)
 }
+

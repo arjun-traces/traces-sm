@@ -1,17 +1,44 @@
-//! SGX sealing abstraction.
+//! Intel SGX Hardware and Simulation Sealing Engine.
 //!
-//! Sealing = encrypt-then-store using a hardware-derived (or simulation) key.
+//! # Architecture and Threat Model
+//! Sealing is the process by which an SGX enclave encrypts data at rest using a key
+//! derived directly from hardware-fused CPU root keys, binding persistent data to either
+//! the specific enclave build measurement (`KEYPOLICY_MRENCLAVE`) or the enclave signer's
+//! public key and security version number (`KEYPOLICY_MRSIGNER` + `ISVSVN`).
 //!
-//! Layout of a sealed blob:
-//!   [0..12]   — AES-GCM nonce (96-bit)
-//!   [12..end] — AES-GCM ciphertext || authentication tag (16 bytes at end)
+//! # Sealed Blob Binary Layout
+//! Every sealed ciphertext payload conforms to the deterministic binary layout:
+//! ```text
+//! ┌──────────────────────┬──────────────────────────────────┬──────────────────────┐
+//! │  AES-GCM Nonce (IV)  │            Ciphertext            │ Authenticated Tag    │
+//! │       12 bytes       │             N bytes              │ 16 bytes             │
+//! └──────────────────────┴──────────────────────────────────┴──────────────────────┘
+//! ```
 //!
-//! Key hierarchy:
-//!   master_key  (from EGETKEY or sim file)
-//!        │
-//!   HKDF-SHA256(salt="", info=purpose_label)
-//!        │
-//!   32-byte DEK  →  AES-256-GCM
+//! # Key Derivation Hierarchy
+//! ```text
+//!          Hardware CPU Master Key (EGETKEY with KEYPOLICY_MRSIGNER)
+//!                                     │
+//!                                     ▼
+//!                 HKDF-Extract(salt = "traces-sm-enclave-v1")
+//!                                     │
+//!                                     ▼
+//!                              Pseudorandom Key (PRK)
+//!                                     │
+//!                                     ▼
+//!             HKDF-Expand(info = purpose_label, len = 32 bytes)
+//!                                     │
+//!                                     ▼
+//!             32-Byte Purpose-Scoped Data Encryption Key (DEK)
+//!                                     │
+//!                                     ▼
+//!                         AES-256-GCM AEAD Encryption
+//! ```
+//!
+//! # Zeroization and Memory Invariants
+//! All intermediate master keys and derived DEKs are strictly wrapped in [`zeroize::Zeroizing`]
+//! buffers, guaranteeing that stack and heap allocations are wiped with zeroes immediately
+//! upon drop or scope exit.
 
 use std::fs;
 use std::path::Path;
@@ -30,13 +57,18 @@ use crate::error::EnclaveError;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Abstraction over the SGX sealing key source.
-/// Implementations must be `Send + Sync` so the state can be shared across
-/// the server thread pool.
+///
+/// Implementations must be `Send + Sync` so that state can be shared across the
+/// in-enclave multi-threaded HTTP server thread pool.
 pub trait SealingKeyProvider: Send + Sync {
-    /// Return the 32-byte master sealing key.
+    /// Returns the 32-byte master root sealing key wrapped in a zeroizing container.
     ///
-    /// On real hardware this calls EGETKEY with `KEYPOLICY_MRSIGNER`.
-    /// In simulation mode it reads / creates a file-backed random key.
+    /// # Hardware Mode (`HW`)
+    /// Invokes the hardware `EGETKEY` instruction configured with `KEYPOLICY_MRSIGNER`
+    /// and current `ISVSVN`, returning a 128-bit key expanded via SHA-256 to 256 bits.
+    ///
+    /// # Simulation Mode (`SIM`)
+    /// Reads or generates a 256-bit CSPRNG key persisted with `0o600` file permissions.
     fn master_key(&self) -> Result<Zeroizing<[u8; 32]>, EnclaveError>;
 }
 
@@ -44,11 +76,13 @@ pub trait SealingKeyProvider: Send + Sync {
 // Simulation provider (dev / CI — no real SGX)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Simulation sealing key provider for non-SGX host platforms, development, and unit testing.
 pub struct SimSealingProvider {
     key_path: std::path::PathBuf,
 }
 
 impl SimSealingProvider {
+    /// Constructs a new [`SimSealingProvider`] rooted at `store_path/.sim_master_key`.
     pub fn new(store_path: &str) -> Self {
         fs::create_dir_all(store_path).expect("Cannot create store directory");
         Self {
@@ -58,6 +92,7 @@ impl SimSealingProvider {
 }
 
 impl SealingKeyProvider for SimSealingProvider {
+    /// Reads the simulation master key or generates a new 256-bit CSPRNG seed on disk.
     fn master_key(&self) -> Result<Zeroizing<[u8; 32]>, EnclaveError> {
         if self.key_path.exists() {
             let bytes = fs::read(&self.key_path).map_err(|_e| EnclaveError::Sealing {
@@ -98,9 +133,11 @@ impl SealingKeyProvider for SimSealingProvider {
 // Hardware provider (real Intel SGX — requires sgx-hw feature)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Real Intel SGX hardware sealing key provider utilizing CPU `EGETKEY` instructions.
 pub struct HwSealingProvider;
 
 impl SealingKeyProvider for HwSealingProvider {
+    /// Executes `EGETKEY` with `KEYPOLICY_MRSIGNER`, returning an expanded 32-byte zeroized key.
     fn master_key(&self) -> Result<Zeroizing<[u8; 32]>, EnclaveError> {
         #[cfg(feature = "sgx-hw")]
         {
@@ -135,10 +172,11 @@ impl SealingKeyProvider for HwSealingProvider {
 // Nonce wrapper
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Single-use nonce wrapper for ring's `BoundKey` API.
+/// Single-use nonce sequence wrapper enforcing exactly-once nonce consumption for ring's `BoundKey` API.
 struct OneTimeNonce(Option<[u8; NONCE_LEN]>);
 
 impl NonceSequence for OneTimeNonce {
+    /// Advances the sequence by yielding the 96-bit nonce exactly once, returning `Unspecified` on subsequent calls.
     fn advance(&mut self) -> Result<Nonce, ring::error::Unspecified> {
         self.0
             .take()
@@ -151,11 +189,11 @@ impl NonceSequence for OneTimeNonce {
 // Key derivation
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Derive a 32-byte purpose-scoped DEK from the master sealing key using
-/// HKDF-SHA256.
+/// Derives a 32-byte purpose-scoped Data Encryption Key (DEK) from the master sealing key using HKDF-SHA256.
 ///
-/// `purpose` MUST be a stable, unique ASCII string per use-case
-/// (e.g. `"seal:secrets"`, `"seal:paillier-priv"`, `"seal:token-key"`).
+/// # Invariants
+/// - `purpose` MUST be a distinct, unique ASCII identifier for each operational domain
+///   (e.g., `"seal:secrets"`, `"seal:paillier-priv"`, `"seal:token-key"`).
 fn derive_dek(master: &[u8; 32], purpose: &str) -> Result<Zeroizing<[u8; 32]>, EnclaveError> {
     // HKDF: Extract → expand
     let salt = hkdf::Salt::new(hkdf::HKDF_SHA256, b"traces-sm-enclave-v1");
@@ -175,9 +213,15 @@ fn derive_dek(master: &[u8; 32], purpose: &str) -> Result<Zeroizing<[u8; 32]>, E
 // Public API
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Seal `plaintext` under a purpose-scoped DEK derived from the master key.
+/// Seals `plaintext` under a purpose-scoped DEK derived from the master key using AES-256-GCM.
 ///
-/// Returns `[nonce(12) | ciphertext | tag(16)]`.
+/// # Binary Output Structure
+/// Returns a byte vector containing `[nonce(12 bytes) | ciphertext | tag(16 bytes)]`.
+///
+/// # Parameters
+/// - `plaintext`: Raw bytes to be encrypted and sealed.
+/// - `purpose`: Domain separation label for HKDF key derivation.
+/// - `provider`: Sealing key provider instance ([`HwSealingProvider`] or [`SimSealingProvider`]).
 pub fn seal(
     plaintext: &[u8],
     purpose: &str,
@@ -208,7 +252,16 @@ pub fn seal(
     Ok(blob)
 }
 
-/// Unseal a blob previously produced by `seal()`.
+/// Unseals a sealed blob previously produced by [`seal`].
+///
+/// # Verification and Security
+/// Verifies the 128-bit authentication tag before returning decrypted plaintext. Any
+/// tampering or corruption returns [`EnclaveError::AesGcmDecrypt`].
+///
+/// # Parameters
+/// - `blob`: The sealed payload `[nonce(12) | ciphertext | tag(16)]`.
+/// - `purpose`: Domain separation string used during sealing.
+/// - `provider`: Sealing key provider instance.
 pub fn unseal(
     blob: &[u8],
     purpose: &str,
@@ -240,6 +293,7 @@ pub fn unseal(
 
 pub use seal as seal_data;
 pub use unseal as unseal_data;
+
 
 #[cfg(test)]
 mod tests {

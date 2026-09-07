@@ -1,16 +1,25 @@
-//! File-based sealed blob store.
+//! Persistent Hardware-Sealed Blob Storage and Lifecycle Engine.
 //!
-//! Each secret is stored as two files in `store_path/`:
-//!   {id}.meta.json  — SecretMetadata (NOT sensitive; plaintext JSON)
-//!   {id}.blob       — EncryptedSecret (AES-256-GCM sealed; opaque bytes)
+//! # Storage Architecture and File Layout
+//! Every secret, keypair, or confidential artifact persisted by the enclave is partitioned into
+//! two dedicated files under the base directory `store_path/`:
+//! 1. `{uuid}.meta.json`: Plaintext JSON metadata containing administrative attributes (name,
+//!    secret type, version, ownership, tags, timestamps, public keys, and ZKP commitments).
+//!    **Invariant**: This file MUST NEVER contain plaintext secret or private key bytes.
+//! 2. `{uuid}.blob`: Hardware-sealed AES-256-GCM ciphertext payload `[nonce(12) | ciphertext | tag(16)]`.
 //!
-//! The store is append-friendly and survives restarts.
-//! Soft-deleted secrets have `deleted_at` set in metadata; their blob files
-//! are retained until GC.
+//! # Filesystem Security and Permissions
+//! - On POSIX systems, all created metadata and blob files are explicitly set to `0o600`
+//!   (owner read/write only) via [`std::os::unix::fs::PermissionsExt`].
+//! - Deletion lifecycle supports soft-delete (marking `deleted_at` timestamp in metadata for audit retention)
+//!   and hard-delete.
+//! - Hard sanitization is performed via [`Store::crypto_shred`], complying with NIST SP 800-88
+//!   Guidelines for Media Sanitization by overwriting on-disk storage blocks with CSPRNG entropy
+//!   and executing synchronous filesystem flushes (`sync_all()`) prior to unlinking.
 
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -23,23 +32,34 @@ use crate::models::SecretType;
 // Persisted metadata (stored in plaintext — no secret values here)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Plaintext administrative metadata stored on disk in `{id}.meta.json`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecretRecord {
+    /// Globally unique record identifier (UUIDv4).
     pub id: Uuid,
+    /// Unique human-readable name of the secret or key.
     pub name: String,
+    /// Category of secret payload ([`SecretType`]).
     pub secret_type: SecretType,
+    /// Monotonically increasing version counter.
     pub version: u32,
-    /// For asymmetric keys: PEM-encoded public key.
+    /// PEM-encoded public key (for asymmetric keypair records).
     pub public_key_pem: Option<String>,
-    /// Algorithm label (e.g. "RSA-4096", "Ed25519").
+    /// Algorithm label (e.g., `"RSA-4096"`, `"Ed25519"`, `"AES-256-GCM"`).
     pub algorithm: Option<String>,
+    /// Principal identifier or IAM identity of the record creator.
     pub owner: String,
+    /// Arbitrary user-defined key-value metadata tags.
     pub tags: HashMap<String, String>,
+    /// UTC timestamp of creation.
     pub created_at: DateTime<Utc>,
+    /// UTC timestamp of last metadata or version update.
     pub updated_at: DateTime<Utc>,
+    /// Optional UTC timestamp when the record expires.
     pub expires_at: Option<DateTime<Utc>>,
+    /// Optional UTC timestamp when the record was soft-deleted.
     pub deleted_at: Option<DateTime<Utc>>,
-    /// Schnorr commitment (hex-encoded public key) for ZKP.
+    /// Hex-encoded compressed Ristretto255 public point for Schnorr zero-knowledge proof verification.
     pub zkp_commitment: Option<String>,
 }
 
@@ -47,11 +67,15 @@ pub struct SecretRecord {
 // Store
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Persistent hardware-sealed file repository.
 pub struct Store {
     base: PathBuf,
 }
 
 impl Store {
+    /// Initializes a new [`Store`] instance rooted at the specified directory path.
+    ///
+    /// Creates the directory tree recursively if it does not already exist.
     pub fn new(store_path: &str) -> Self {
         let base = PathBuf::from(store_path);
         fs::create_dir_all(&base).expect("Cannot create store directory");
@@ -60,17 +84,22 @@ impl Store {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    /// Returns the absolute path to `{id}.meta.json`.
     fn meta_path(&self, id: &Uuid) -> PathBuf {
         self.base.join(format!("{id}.meta.json"))
     }
 
+    /// Returns the absolute path to `{id}.blob`.
     fn blob_path(&self, id: &Uuid) -> PathBuf {
         self.base.join(format!("{id}.blob"))
     }
 
     // ── Write ─────────────────────────────────────────────────────────────────
 
-    /// Persist a new or updated secret record + its sealed blob.
+    /// Persists a new or updated secret record metadata alongside its hardware-sealed blob.
+    ///
+    /// # Security Invariant
+    /// Enforces `0o600` file permissions on both written files on POSIX systems.
     pub fn save(&self, record: &SecretRecord, blob: &[u8]) -> Result<(), EnclaveError> {
         let meta_json = serde_json::to_vec_pretty(record)?;
         let m_path = self.meta_path(&record.id);
@@ -86,7 +115,7 @@ impl Store {
         Ok(())
     }
 
-    /// Update only the metadata (e.g. after soft-delete or rotation).
+    /// Updates only the plaintext metadata JSON file (e.g., during tag update or soft-deletion).
     pub fn save_meta(&self, record: &SecretRecord) -> Result<(), EnclaveError> {
         let meta_json = serde_json::to_vec_pretty(record)?;
         let m_path = self.meta_path(&record.id);
@@ -101,7 +130,10 @@ impl Store {
 
     // ── Read ──────────────────────────────────────────────────────────────────
 
-    /// Load a secret record by ID.
+    /// Loads a secret record metadata and its sealed ciphertext blob by UUID.
+    ///
+    /// # Errors
+    /// Returns [`EnclaveError::NotFound`] if the record does not exist or has been soft-deleted.
     pub fn load(&self, id: &Uuid) -> Result<(SecretRecord, Vec<u8>), EnclaveError> {
         let meta_path = self.meta_path(id);
         if !meta_path.exists() {
@@ -118,7 +150,7 @@ impl Store {
         Ok((record, blob))
     }
 
-    /// Load only the metadata (no blob I/O).
+    /// Loads only the metadata for a record by UUID without performing blob I/O.
     pub fn load_meta(&self, id: &Uuid) -> Result<SecretRecord, EnclaveError> {
         let meta_path = self.meta_path(id);
         if !meta_path.exists() {
@@ -129,7 +161,10 @@ impl Store {
         Ok(record)
     }
 
-    /// Find a record by name (linear scan — acceptable at secrets-manager scale).
+    /// Finds an active (non-deleted) record by human-readable name.
+    ///
+    /// # Errors
+    /// Returns [`EnclaveError::NotFound`] if no active secret matches `name`.
     pub fn find_by_name(&self, name: &str) -> Result<SecretRecord, EnclaveError> {
         self.list_all()?
             .into_iter()
@@ -141,7 +176,7 @@ impl Store {
 
     // ── List ──────────────────────────────────────────────────────────────────
 
-    /// List all non-deleted secret records (metadata only).
+    /// Lists all active (non-deleted) secret records, sorted chronologically by creation timestamp.
     pub fn list(&self) -> Result<Vec<SecretRecord>, EnclaveError> {
         Ok(self
             .list_all()?
@@ -150,6 +185,7 @@ impl Store {
             .collect())
     }
 
+    /// Reads all records from disk including soft-deleted entries.
     fn list_all(&self) -> Result<Vec<SecretRecord>, EnclaveError> {
         let mut records = Vec::new();
         for entry in fs::read_dir(&self.base)? {
@@ -167,14 +203,16 @@ impl Store {
 
     // ── Delete ────────────────────────────────────────────────────────────────
 
-    /// Soft-delete: set `deleted_at` in metadata; blob retained for audit.
+    /// Soft-deletes a secret by populating its `deleted_at` timestamp.
+    ///
+    /// The encrypted blob remains intact on disk for audit compliance until explicitly hard-deleted or shredded.
     pub fn soft_delete(&self, id: &Uuid) -> Result<(), EnclaveError> {
         let mut record = self.load_meta(id)?;
         record.deleted_at = Some(Utc::now());
         self.save_meta(&record)
     }
 
-    /// Hard-delete: remove both metadata and blob files.
+    /// Hard-deletes a secret by immediately removing both `.meta.json` and `.blob` files from disk.
     pub fn hard_delete(&self, id: &Uuid) -> Result<(), EnclaveError> {
         let m = self.meta_path(id);
         let b = self.blob_path(id);
@@ -189,16 +227,24 @@ impl Store {
 
     // ── Existence check ───────────────────────────────────────────────────────
 
+    /// Checks if a record exists on disk with the given UUID.
     pub fn exists(&self, id: &Uuid) -> bool {
         self.meta_path(id).exists()
     }
 
+    /// Checks if an active (non-deleted) record exists with the given name.
     pub fn name_exists(&self, name: &str) -> bool {
         self.find_by_name(name).is_ok()
     }
 
-    /// NIST SP 800-88 Crypto-Shredding: overwrites file sectors with random bytes
-    /// before unlinking `.blob` and `.meta.json` files.
+    /// Sanitizes and destroys on-disk record files according to NIST SP 800-88 Guidelines for Media Sanitization.
+    ///
+    /// # Overwrite Protocol
+    /// 1. Reads file physical size $L$.
+    /// 2. Fills a buffer with $L$ bytes from the hardware CSPRNG [`SystemRandom`].
+    /// 3. Overwrites disk sectors with the random buffer.
+    /// 4. Issues [`std::fs::File::sync_all`] to flush storage drive write caches.
+    /// 5. Unlinks the file from the filesystem.
     pub fn crypto_shred(&self, id: &Uuid) -> Result<(), EnclaveError> {
         let m = self.meta_path(id);
         let b = self.blob_path(id);
@@ -228,3 +274,4 @@ impl Store {
         Ok(())
     }
 }
+

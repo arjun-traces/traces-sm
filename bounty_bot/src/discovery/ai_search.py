@@ -1,3 +1,9 @@
+"""AI Search and RSS/Feed Discovery Source.
+
+Monitors security blog feeds, platform RSS streams, and community announcements
+for newly launched bug bounty and VDP programs.
+"""
+
 import logging
 from typing import List
 import feedparser

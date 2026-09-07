@@ -1,22 +1,42 @@
-//! Paillier Partially Homomorphic Encryption (PHE).
+//! # Paillier Partially Homomorphic Encryption (PHE) Engine
 //!
-//! Paillier is an *additively homomorphic* public-key cryptosystem:
+//! This module implements the Paillier cryptosystem, providing additive homomorphic
+//! encryption and scalar multiplication over encrypted integers inside the Intel SGX enclave.
 //!
-//!   Enc(m1) ⊕ Enc(m2)  ≡  Enc(m1 + m2)   (mod n²)
-//!   Enc(m)  ^ k         ≡  Enc(m * k)      (mod n²)
+//! ## Mathematical Foundations & Homomorphic Properties
 //!
-//! Security parameter: 2048-bit modulus n = p·q (two safe primes).
+//! ### 1. Key Generation
+//! - Let $p, q$ be two large distinct primes of equal bit-length.
+//! - Compute RSA composite modulus $n = p \cdot q$ and $n^2$.
+//! - Using the simplified Paillier scheme, choose base generator $g = n + 1$.
+//! - Carmichael's function: $\lambda(n) = \text{lcm}(p-1, q-1) = \frac{(p-1)(q-1)}{\gcd(p-1, q-1)}$.
+//! - Multiplicative inverse: $\mu = \lambda^{-1} \pmod{n}$.
 //!
-//! This allows the enclave to perform encrypted summation and scalar
-//! multiplication over ciphertexts supplied by untrusted parties, without
-//! ever decrypting the individual operands.
+//! ### 2. Encryption ($m \in \mathbb{Z}_n$)
+//! Select random blinding scalar $r \in \mathbb{Z}_n^*$:
+//! $$c = g^m \cdot r^n \pmod{n^2} = (1 + m \cdot n) \cdot r^n \pmod{n^2}$$
+//!
+//! ### 3. Decryption ($c \in \mathbb{Z}_{n^2}^*$)
+//! Compute the $L$-function quotient $L(u) = \frac{u - 1}{n}$:
+//! $$m = L(c^\lambda \bmod n^2) \cdot \mu \pmod{n}$$
+//!
+//! ### 4. Homomorphic Operations (Zero Plaintext Exposure)
+//! - **Additive Homomorphism**:
+//!   $$\text{Enc}(m_1) \cdot \text{Enc}(m_2) \equiv \text{Enc}(m_1 + m_2) \pmod{n^2}$$
+//! - **Scalar Multiplication**:
+//!   $$\text{Enc}(m)^k \equiv \text{Enc}(k \cdot m) \pmod{n^2}$$
+//! - **Re-randomization (Unlinkable Ciphertext Blinding)**:
+//!   $$c' = c \cdot r'^n \pmod{n^2}$$
+//!
+//! ## Invariants & Security
+//! - Private key fields (`lambda`, `mu`) implement custom [`Drop`] logic to zeroize memory.
+//! - Minimum recommended modulus size is 2048 bits for production deployments.
 
 use num_bigint::{BigUint, RandBigInt};
 use num_integer::Integer;
 use num_traits::{One, Zero};
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
-use zeroize::Zeroize;
 
 use crate::error::EnclaveError;
 
@@ -24,43 +44,47 @@ use crate::error::EnclaveError;
 // Key types
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Paillier public key — safe to share with any party.
+/// Paillier public key — safe to distribute to external untrusted clients for client-side encryption.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaillierPublicKey {
-    /// Modulus  n = p·q
+    /// Composite modulus $n = p \cdot q$.
     pub n: BigUint,
-    /// Generator g (typically n + 1 for the simplified variant)
+    /// Base generator $g = n + 1$.
     pub g: BigUint,
-    /// n² (cached for efficiency)
+    /// Precomputed square modulus $n^2$.
     pub n_sq: BigUint,
 }
 
-/// Paillier private key — kept sealed inside the enclave.
-/// Zeroize on drop.
+/// Paillier private key — strictly isolated within EPC memory and zeroized upon drop.
 #[derive(Debug, Clone)]
 pub struct PaillierPrivateKey {
-    /// Carmichael's λ(n) = lcm(p-1, q-1)
+    /// Carmichael's totient $\lambda(n) = \text{lcm}(p-1, q-1)$.
     pub lambda: BigUint,
-    /// μ = λ⁻¹ mod n  (used in decryption)
+    /// Modular inverse $\mu = \lambda^{-1} \pmod{n}$.
     pub mu: BigUint,
+    /// Modulus $n$.
     pub n: BigUint,
+    /// Square modulus $n^2$.
     pub n_sq: BigUint,
 }
 
 impl Drop for PaillierPrivateKey {
+    /// Overwrites sensitive private parameters with zeroes prior to memory deallocation.
     fn drop(&mut self) {
-        // Overwrite sensitive components before freeing
         let zero = BigUint::zero();
         self.lambda = zero.clone();
         self.mu = zero.clone();
     }
 }
 
-/// Full key pair.
+/// Full Paillier public/private keypair structure.
 pub struct PaillierKeyPair {
+    /// Public key for encryption and homomorphic evaluation.
     pub public: PaillierPublicKey,
+    /// Private key for decryption inside the enclave.
     pub private: PaillierPrivateKey,
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Serialisable private key (for sealing to disk)
@@ -174,7 +198,6 @@ fn miller_rabin(n: &BigUint, k: u32) -> bool {
 /// Extended Euclidean — returns (gcd, x, y) s.t. a*x + b*y = gcd.
 fn extended_gcd(a: &BigUint, b: &BigUint) -> (BigUint, num_bigint::BigInt, num_bigint::BigInt) {
     use num_bigint::BigInt;
-    use num_traits::Signed;
 
     let (mut old_r, mut r) = (BigInt::from(a.clone()), BigInt::from(b.clone()));
     let (mut old_s, mut s) = (BigInt::one(), BigInt::zero());
@@ -201,7 +224,6 @@ fn extended_gcd(a: &BigUint, b: &BigUint) -> (BigUint, num_bigint::BigInt, num_b
 /// Compute the modular inverse of `a` mod `m`.
 fn mod_inverse(a: &BigUint, m: &BigUint) -> Option<BigUint> {
     use num_bigint::BigInt;
-    use num_traits::Signed;
 
     let (gcd, x, _) = extended_gcd(a, m);
     if gcd != BigUint::one() {

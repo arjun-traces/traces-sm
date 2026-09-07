@@ -1,18 +1,31 @@
+//! Traces AI Interactive Intelligence Drawer Component.
+//!
+//! # Responsibilities
+//! Provides an integrated AI assistant side drawer allowing operators to query
+//! key lifecycles, cryptoperiod telemetry, SP 800-90B entropy health, and policy decisions.
+
 use serde::{Deserialize, Serialize};
 use yew::prelude::*;
 
+/// Properties accepted by the [`TracesAiPanel`] component.
 #[derive(Properties, PartialEq)]
 pub struct TracesAiProps {
+    /// Boolean flag indicating whether the drawer is open.
     pub is_open: bool,
+    /// Callback invoked when the user closes the drawer.
     pub on_close: Callback<()>,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+/// Single conversational chat message.
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct ChatMessage {
-    pub sender: String, // "user" or "assistant"
+    /// Sender role (`"user"` or `"assistant"`).
+    pub sender: String,
+    /// Text message payload.
     pub text: String,
 }
 
+/// Slide-over drawer component for conversational enclave telemetry assistance.
 #[function_component(TracesAiPanel)]
 pub fn traces_ai_panel(props: &TracesAiProps) -> Html {
     let api_key = use_state(|| String::new());

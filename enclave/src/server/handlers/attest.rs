@@ -1,4 +1,11 @@
-//! Attestation handlers.
+//! Intel SGX Remote Attestation and Hardware Measurement Handlers.
+//!
+//! # Purpose and Attestation Protocols
+//! This module handles generation and inspection of Intel SGX Data Center Attestation Primitives (DCAP)
+//! quotes and enclave measurements:
+//! - **MRENCLAVE**: SHA-256 cryptographic digest of the enclave binary code, initial data, and page layout.
+//! - **MRSIGNER**: SHA-256 hash of the ISV's RSA signing key.
+//! - **ISVPRODID / ISVSVN**: Product ID and monotonic security version number.
 
 use std::sync::Arc;
 
@@ -7,6 +14,9 @@ use crate::models::{AttestationMeasurements, AttestationQuoteResponse};
 use crate::server::router::HttpRequest;
 use crate::server::EnclaveState;
 
+/// Generates an SGX attestation quote bound to current runtime measurements.
+///
+/// In hardware mode, constructs a DCAP ECDSA quote; in simulation mode, returns a mock simulation quote.
 pub fn quote(
     _req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -34,6 +44,7 @@ pub fn quote(
     })?)
 }
 
+/// Returns the current enclave measurements (`MRENCLAVE`, `MRSIGNER`, `ISVPRODID`, `ISVSVN`).
 pub fn measurements(
     _req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -43,6 +54,7 @@ pub fn measurements(
     ))?)
 }
 
+/// Provides documentation and status for quote verification via host PCCS / Intel Trust Authority.
 pub fn verify(
     _req: &HttpRequest,
     _state: &Arc<EnclaveState>,
@@ -55,6 +67,7 @@ pub fn verify(
     }))
 }
 
+/// Constructs measurement container for the given SGX execution mode.
 fn get_measurements(mode: &str) -> AttestationMeasurements {
     let zeroes = "0".repeat(64);
     AttestationMeasurements {
@@ -67,3 +80,4 @@ fn get_measurements(mode: &str) -> AttestationMeasurements {
         sgx_mode: Some(mode.to_string()),
     }
 }
+

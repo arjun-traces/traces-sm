@@ -1,13 +1,31 @@
+//! FIDO2 / WebAuthn Hardware Token Ceremony Simulator Component.
+//!
+//! # Responsibilities
+//! Simulates FIDO2 / WebAuthn cryptographic user presence verification for physical
+//! hardware security tokens (e.g., YubiKey, Nitrokey, Apple TouchID).
+
 use yew::prelude::*;
 
+/// State of the physical hardware authentication ceremony.
 #[derive(Clone, PartialEq, Debug)]
+#[allow(dead_code)]
 pub enum TokenStatus {
+    /// Token ceremony not started.
     Idle,
+    /// Prompting operator for physical user presence touch.
     WaitingForTouch,
-    Authenticated { key_handle: String, rp_id: String },
+    /// Hardware token assertion successfully verified.
+    Authenticated {
+        /// Generated credential ID.
+        key_handle: String,
+        /// Relying party ID.
+        rp_id: String,
+    },
+    /// Ceremony encountered a hardware communication or assertion error.
     Error(String),
 }
 
+/// View component simulating hardware token unlock ceremonies.
 #[function_component(WebAuthnView)]
 pub fn webauthn_view() -> Html {
     let status = use_state(|| TokenStatus::Idle);

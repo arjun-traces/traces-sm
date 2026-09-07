@@ -1,3 +1,9 @@
+"""Bounty Bot Main Orchestrator.
+
+Coordinates multi-source discovery, deduplication, optional health checks,
+JSON dataset persistence, and README synchronization.
+"""
+
 import asyncio
 import json
 import logging
@@ -14,9 +20,16 @@ logger = logging.getLogger("bounty_bot")
 
 
 class BountyBotOrchestrator:
-    """Main orchestration controller for Bounty Bot."""
+    """Main orchestration controller for Bounty Bot.
+
+    Attributes:
+        base_dir: Root directory of the bounty_bot package.
+        data_dir: Output path for master and partitioned JSON datasets.
+        by_platform_dir: Subdirectory for per-platform JSON exports.
+    """
 
     def __init__(self, base_dir: Path):
+        """Initializes directories for dataset storage."""
         self.base_dir = base_dir
         self.data_dir = base_dir / "data"
         self.by_platform_dir = self.data_dir / "by-platform"
@@ -26,6 +39,7 @@ class BountyBotOrchestrator:
         self.by_platform_dir.mkdir(parents=True, exist_ok=True)
 
     async def run(self, perform_health_checks: bool = False) -> List[BountyProgram]:
+        """Executes a full discovery run, deduplicates records, and exports datasets."""
         logger.info("Starting Bounty Bot discovery run...")
 
         # 1. Instantiate discovery sources

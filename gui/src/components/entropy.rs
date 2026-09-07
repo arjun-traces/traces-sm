@@ -1,6 +1,13 @@
+//! NIST SP 800-90B DRBG Continuous Health Monitor Component.
+//!
+//! # Health Metrics
+//! - **APT (Adaptive Proportion Test)**: Validates non-repetition frequency over window $W=512$.
+//! - **RCT (Repetition Count Test)**: Detects continuous identical sample runs ($C=16$).
+
 use crate::api::{get_entropy_health, EntropyHealth};
 use yew::prelude::*;
 
+/// View component displaying entropy source telemetry and continuous test statuses.
 #[function_component(EntropyView)]
 pub fn entropy_view() -> Html {
     let health = use_state(|| None::<EntropyHealth>);

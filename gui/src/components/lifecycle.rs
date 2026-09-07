@@ -1,6 +1,13 @@
+//! NIST SP 800-57 Key Lifecycle & SP 800-88 Sanitization Table Component.
+//!
+//! # Responsibilities
+//! Displays all managed cryptographic keys, their current lifecycle state, and provides
+//! interactive controls to trigger key rotation or NIST SP 800-88 cryptographic shredding.
+
 use crate::api::{get_keys, shred_key, transition_key};
 use yew::prelude::*;
 
+/// View component rendering the key lifecycle management matrix.
 #[function_component(LifecycleView)]
 pub fn lifecycle_view() -> Html {
     let keys = use_state(Vec::new);

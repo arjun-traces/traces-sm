@@ -1,3 +1,9 @@
+"""Bounty Directory and Root README Generator.
+
+Formats discovered vulnerability programs into markdown tables and syncs summary
+statistics directly into the repository root `README.md`.
+"""
+
 import json
 import re
 from datetime import datetime, timezone

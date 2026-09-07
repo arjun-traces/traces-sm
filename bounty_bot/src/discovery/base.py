@@ -1,3 +1,9 @@
+"""Abstract Base Class for Discovery Sources.
+
+Defines the discovery interface contracts implemented by crawlers, feed readers,
+and scanners.
+"""
+
 from abc import ABC, abstractmethod
 from typing import List
 from src.models import BountyProgram

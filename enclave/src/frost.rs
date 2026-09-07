@@ -1,9 +1,32 @@
-//! FROST (Flexible Round-Optimized Schnorr Threshold) Signatures over Ed25519.
+//! # FROST (Flexible Round-Optimized Schnorr Threshold) Signatures over Ed25519
 //!
-//! Provides threshold DKG key generation (trusted dealer), Round 1 nonces/commitments,
-//! Round 2 signing share production, threshold signature aggregation, and verification.
+//! This module implements the FROST threshold signature protocol (IETF draft-irtf-cfrg-frost-15)
+//! specialized for curve Ed25519 within the Intel SGX enclave boundary.
+//!
+//! ## Protocol Overview & Algebraic Structure
+//!
+//! FROST provides $t$-of-$n$ Schnorr signatures that are indistinguishable from single-signer
+//! Ed25519 signatures, while eliminating single points of failure.
+//!
+//! ### Protocol Phases:
+//! 1. **Phase 0: Key Generation (Trusted Dealer or DKG)**:
+//!    - Master secret $s \in \mathbb{Z}_q$ is split via polynomial $f(x) = s + a_1 x + \dots + a_{t-1} x^{t-1}$.
+//!    - Each signer $i$ receives a private [`KeyPackage`] containing secret share $s_i = f(i)$.
+//!    - Group public key $Y = s \cdot G$ and participant public keys $Y_i = s_i \cdot G$ are published.
+//! 2. **Round 1: Commitment & Nonce Generation ([`round1_commit`])**:
+//!    - Each signer generates two ephemeral secret nonces $(d_i, e_i) \xleftarrow{\$} \mathbb{Z}_q$ and publishes
+//!      commitments $(D_i, E_i) = (d_i G, e_i G)$.
+//!    - **CRITICAL INVARIANT**: Nonces must be used for exactly one signing round and destroyed immediately.
+//!      Reusing nonces exposes the long-term secret share $s_i$.
+//! 3. **Round 2: Signature Share Generation ([`round2_sign_share`])**:
+//!    - Signers compute binding factor $\rho_i$, group commitment $R$, challenge $c = H(R, Y, m)$,
+//!      and Lagrange interpolation coefficient $\lambda_i$.
+//!    - Signer produces share $z_i = d_i + (e_i \cdot \rho_i) + \lambda_i s_i c \pmod{q}$.
+//! 4. **Aggregation ([`aggregate_signature`])**:
+//!    - Coordinator aggregates $z = \sum_{i \in S} z_i \pmod{q}$.
+//!    - Final standard Schnorr signature is $(R, z)$.
 
-use frost::keys::{IdentifierList, KeyPackage, PublicKeyPackage, SecretShare};
+use frost::keys::{IdentifierList, KeyPackage, PublicKeyPackage};
 use frost::round1::{SigningCommitments, SigningNonces};
 use frost::round2::SignatureShare;
 use frost::{Identifier, Signature, SigningPackage};
@@ -23,22 +46,29 @@ pub struct FrostKeyGenOutput {
     pub public_key_package: String,
     /// Hex-encoded group public key (VerifyingKey).
     pub group_public_key_hex: String,
-    /// Threshold (min signers required).
+    /// Threshold (minimum signers required, $t$).
     pub min_signers: u16,
-    /// Total max signers.
+    /// Total maximum participants ($n$).
     pub max_signers: u16,
 }
 
 /// Output of Round 1 nonce generation.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FrostRound1Output {
-    /// Serialized SigningNonces JSON string (kept private to signer).
+    /// Serialized SigningNonces JSON string (kept strictly private in enclave memory).
     pub nonces_json: String,
-    /// Serialized SigningCommitments JSON string (shared with coordinator).
+    /// Serialized SigningCommitments JSON string (shared with participants/coordinator).
     pub commitments_json: String,
 }
 
-/// Perform trusted dealer key generation for t-of-n FROST Ed25519 threshold key setup.
+/// Performs trusted dealer key generation for $t$-of-$n$ FROST Ed25519 threshold key setup.
+///
+/// # Parameters
+/// * `max_signers` - Total number of participant key packages to generate ($n$).
+/// * `min_signers` - Minimum threshold of signers required to produce a valid signature ($t$).
+///
+/// # Invariants & Errors
+/// Returns [`EnclaveError::DkgInvalidInput`] if $min\_signers = 0$ or $min\_signers > max\_signers$.
 pub fn generate_dealer_keys(
     max_signers: u16,
     min_signers: u16,
@@ -90,7 +120,11 @@ pub fn generate_dealer_keys(
     })
 }
 
-/// Round 1: Generate nonces and public commitments for a participant.
+/// Round 1: Generates ephemeral nonces and public commitments $(D_i, E_i)$ for a participant.
+///
+/// # Security Invariant
+/// The resulting `nonces_json` contains secret scalars $(d_i, e_i)$ that must NEVER be published
+/// outside the signing enclave or reused across multiple signatures.
 pub fn round1_commit(key_package_json: &str) -> Result<FrostRound1Output, EnclaveError> {
     let key_package: KeyPackage = serde_json::from_str(key_package_json).map_err(|e| {
         EnclaveError::DkgInvalidInput(format!("KeyPackage deserialize error: {}", e))
@@ -98,6 +132,7 @@ pub fn round1_commit(key_package_json: &str) -> Result<FrostRound1Output, Enclav
 
     let mut rng = thread_rng();
     let (nonces, commitments) = frost::round1::commit(key_package.signing_share(), &mut rng);
+
 
     let nonces_json = serde_json::to_string(&nonces).map_err(|e| {
         EnclaveError::DkgInvalidInput(format!("SigningNonces serialize error: {}", e))

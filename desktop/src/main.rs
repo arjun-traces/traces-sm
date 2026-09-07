@@ -1,5 +1,28 @@
+//! `traces-sm` Native Desktop GUI Application (egui / eframe).
+//!
+//! # Architecture & UI Overview
+//! The desktop crate provides a cross-platform graphical console built using `eframe` and `egui`
+//! (immediate mode GUI).
+//!
+//! # UI Layout & Modules
+//! - **Top Header**: Displays SGX hardware state (`HW_ACTIVE`), active profile, RA-TLS status, and role badge.
+//! - **Bottom Status Bar**: Displays enclave device file (`/dev/sgx_enclave`), EPC memory usage, and hardware mode.
+//! - **Left Sidebar Navigation**: Routes between 7 management tabs:
+//!   - Dashboard: Executive overview of keys, secrets, DKG quorum, and DRBG health.
+//!   - Key Lifecycle: NIST SP 800-57 matrix tracking active, deactivated, and destroyed keys.
+//!   - Vault: Sealed envelope-encrypted secret records and token bundles.
+//!   - Topology: DKG 2-of-3 threshold peer nodes and RA-TLS verification.
+//!   - Entropy: NIST SP 800-90B continuous health telemetry (APT & RCT).
+//!   - ZKP Sandbox: Interactive zero-knowledge proof (Schnorr, Bulletproofs) and Paillier PHE playground.
+//!   - Policy & Audit: Governance invariant enforcement and tamper-evident audit trail.
+//! - **Right-hand Traces AI Panel**: Integrated assistant panel for querying enclave telemetry and key metadata.
+
 use eframe::egui;
 
+/// Application entry point for the desktop GUI.
+///
+/// Initializes tracing subscriber, sets default window viewport options (1280x800),
+/// and launches the `eframe` native event loop.
 fn main() -> eframe::Result<()> {
     tracing_subscriber::fmt::init();
     let options = eframe::NativeOptions {
@@ -16,16 +39,24 @@ fn main() -> eframe::Result<()> {
     )
 }
 
+/// Primary reactive state container for the `traces-sm` desktop application.
 struct TracesSmApp {
+    /// Currently selected navigation tab identifier.
     active_tab: String,
+    /// SGX hardware execution mode string (e.g. `HW_ACTIVE` or `SIMULATION`).
     sgx_mode: String,
+    /// Boolean flag toggling visibility of the right-hand Traces AI drawer.
     show_ai_panel: bool,
+    /// Optional Anthropic Claude API key for live AI assistant integration.
     anthropic_api_key: String,
+    /// User prompt input buffer for the AI assistant panel.
     ai_input: String,
+    /// Chat message history tuples `(sender, text)`.
     ai_messages: Vec<(String, String)>,
 }
 
 impl Default for TracesSmApp {
+    /// Constructs default initial application state with the dashboard active and welcome AI message.
     fn default() -> Self {
         Self {
             active_tab: "dashboard".to_string(),

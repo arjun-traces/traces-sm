@@ -1,15 +1,28 @@
-//! Envelope encryption helpers.
+//! # Enclave Envelope Encryption and Cryptographic Primitives
 //!
-//! Each secret gets its own random 256-bit DEK.
-//! That DEK is sealed (AES-256-GCM) using the master sealing key
-//! so only the enclave can recover it later.
+//! This module implements envelope encryption for arbitrary secret payloads inside the SGX enclave.
 //!
-//! Wire format of an EncryptedSecret blob (all concatenated):
-//!   sealed_dek  : 12 (nonce) + 32 (DEK) + 16 (tag) = 60 bytes
-//!   separator   : 0x00 byte
-//!   ciphertext  : 12 (nonce) + payload + 16 (tag)
+//! ## Cryptographic Design & Wire Format
 //!
-//! The separator is a fixed marker to make parsing unambiguous.
+//! To avoid encrypting large data payloads under the master sealing key directly, `traces-sm` employs
+//! a two-tier envelope encryption scheme:
+//! 1. **Data Encryption Key (DEK)**: A fresh, ephemeral 256-bit symmetric key generated via CSPRNG
+//!    for each secret write.
+//! 2. **Key Encryption Key (KEK / Master Sealing Key)**: The enclave's hardware-bound root sealing key
+//!    derives purpose-isolated keys to seal the ephemeral DEK.
+//!
+//! ### Wire Format Layout
+//! ```text
+//! ┌──────────────────────────────────────────────┬───────────┬────────────────────────────────────────┐
+//! │ Sealed DEK (60 Bytes)                        │ Sep (0x00)│ Ciphertext Payload                     │
+//! │ 12B Nonce || 32B Sealed DEK || 16B Auth Tag   │ 1 Byte    │ 12B Nonce || Data Ciphertext || 16B Tag│
+//! └──────────────────────────────────────────────┴───────────┴────────────────────────────────────────┘
+//! ```
+//!
+//! ## Memory Safety & Invariants
+//! - The plaintext DEK is wrapped in [`zeroize::Zeroizing<[u8; 32]>`] to guarantee that raw key bytes
+//!   are scrubbed from stack/heap memory on function return.
+//! - AEAD nonces are strictly 96 bits generated from a cryptographically secure RNG.
 
 use ring::aead::{
     Aad, BoundKey, Nonce, NonceSequence, OpeningKey, SealingKey, UnboundKey, AES_256_GCM, NONCE_LEN,
@@ -20,11 +33,21 @@ use zeroize::Zeroizing;
 use crate::error::EnclaveError;
 use crate::sealing::{seal, unseal, SealingKeyProvider};
 
-const SEALED_DEK_LEN: usize = NONCE_LEN + 32 + 16; // 60 bytes
+/// Length in bytes of the hardware-sealed DEK blob: 12 (nonce) + 32 (DEK) + 16 (GCM tag) = 60 bytes.
+const SEALED_DEK_LEN: usize = NONCE_LEN + 32 + 16;
+
+/// Delimiter byte (0x00) separating the sealed DEK header from the encrypted payload.
 const SEPARATOR: u8 = 0x00;
 
+/// A single-use AEAD nonce sequence provider enforcing non-repeatable nonces in Ring.
 struct OneTimeNonce(Option<[u8; NONCE_LEN]>);
+
 impl NonceSequence for OneTimeNonce {
+    /// Advances and consumes the one-time nonce.
+    ///
+    /// # Invariant
+    /// Returns [`ring::error::Unspecified`] if called more than once on the same instance,
+    /// preventing nonce reuse under identical encryption keys.
     fn advance(&mut self) -> Result<Nonce, ring::error::Unspecified> {
         self.0
             .take()
@@ -33,10 +56,22 @@ impl NonceSequence for OneTimeNonce {
     }
 }
 
-/// Encrypt `plaintext` with a fresh random DEK, then seal the DEK.
+/// Encrypts `plaintext` using a fresh ephemeral DEK, then seals the DEK under the hardware master key.
 ///
-/// Returns a self-contained blob that can only be decrypted inside the
-/// enclave (because only the enclave can unseal the DEK).
+/// # Invariants & Execution Flow
+/// 1. Generates a 256-bit random DEK in zeroized memory.
+/// 2. Seals the DEK with `purpose` domain separation via [`crate::sealing::seal`].
+/// 3. Generates a distinct 96-bit random nonce for the payload.
+/// 4. Encrypts `plaintext` in-place using AES-256-GCM and appends a 128-bit authentication tag.
+/// 5. Assembles and returns the envelope binary blob.
+///
+/// # Parameters
+/// * `plaintext` - Raw unencrypted secret bytes.
+/// * `purpose` - Domain separation context string bound to the sealed key.
+/// * `provider` - Hardware sealing key provider.
+///
+/// # Errors
+/// Returns [`EnclaveError::AesGcmEncrypt`] if encryption or nonce generation fails.
 pub fn encrypt_secret(
     plaintext: &[u8],
     purpose: &str,
@@ -75,7 +110,23 @@ pub fn encrypt_secret(
     Ok(blob)
 }
 
-/// Decrypt a blob produced by `encrypt_secret`.
+/// Decrypts a self-contained envelope blob produced by [`encrypt_secret`].
+///
+/// # Invariants & Decryption Steps
+/// 1. Verifies minimum blob length (`SEALED_DEK_LEN + 1 + NONCE_LEN + 16`).
+/// 2. Validates the 0x00 separator boundary.
+/// 3. Unseals the ephemeral 256-bit DEK under the matching `purpose` context.
+/// 4. Decrypts the payload ciphertext in-place and validates the 128-bit GCM tag.
+/// 5. Automatically zeroizes the recovered DEK when leaving function scope.
+///
+/// # Parameters
+/// * `blob` - Full concatenated envelope blob.
+/// * `purpose` - Context string that must match the encryption purpose exactly.
+/// * `provider` - Hardware sealing key provider.
+///
+/// # Errors
+/// Returns [`EnclaveError::AesGcmDecrypt`] or [`EnclaveError::Unsealing`] if the blob is
+/// truncated, the tag is invalid, or the purpose context does not match.
 pub fn decrypt_secret(
     blob: &[u8],
     purpose: &str,
@@ -142,3 +193,4 @@ mod tests {
         assert!(decrypt_secret(&blob, "purpose:B", &provider).is_err());
     }
 }
+

@@ -1,4 +1,11 @@
-//! Secrets CRUD handlers.
+//! Opaque Secret Management and Envelope Encryption Handlers.
+//!
+//! # Purpose and Operations
+//! Handles CRUD lifecycle operations for opaque, arbitrary-length confidential payloads:
+//! - Ingests Base64 plaintext from authenticated clients.
+//! - Immediately derives a deterministic Schnorr commitment $Y = x \cdot G$ for ZKP verification.
+//! - Seals plaintext into an authenticated AES-256-GCM ciphertext blob via [`crate::crypto::encrypt_secret`].
+//! - Manages metadata versioning and soft-deletion.
 
 use base64::Engine as _;
 use chrono::Utc;
@@ -13,6 +20,7 @@ use crate::server::EnclaveState;
 use crate::store::SecretRecord;
 use crate::zkp::schnorr::generate_commitment;
 
+/// Creates and hardware-seals a new secret record, generating a Schnorr ZKP commitment.
 pub fn create(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -81,6 +89,7 @@ pub fn create(
     })?)
 }
 
+/// Retrieves and decrypts a hardware-sealed secret record by UUID.
 pub fn get(
     _req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -115,6 +124,7 @@ pub fn get(
     })?)
 }
 
+/// Lists administrative metadata for all active secret records.
 pub fn list(
     _req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -138,6 +148,7 @@ pub fn list(
     Ok(serde_json::to_value(metas)?)
 }
 
+/// Updates the plaintext payload of an existing secret, rotating its version and re-sealing.
 pub fn update(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -163,6 +174,7 @@ pub fn update(
     )
 }
 
+/// Soft-deletes a secret by populating its `deleted_at` timestamp.
 pub fn delete(
     _req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -172,3 +184,4 @@ pub fn delete(
     state.store.soft_delete(&uuid)?;
     Ok(serde_json::json!({ "id": uuid, "deleted": true }))
 }
+

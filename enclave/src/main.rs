@@ -1,7 +1,26 @@
-//! Enclave entrypoint.
+//! Enclave Application Entry Point and Lifecycle Orchestrator.
 //!
-//! When compiled for `x86_64-fortanix-unknown-sgx`, this binary runs entirely
-//! inside the Intel SGX Enclave Page Cache (EPC).
+//! # Purpose and TCB Architecture
+//! When compiled for target `x86_64-fortanix-unknown-sgx` (or native simulation mode), this
+//! binary executes entirely within the Intel SGX Enclave Page Cache (EPC). It establishes
+//! the hardware Trusted Computing Base (TCB), enforces mandatory security policies, and
+//! services authenticated client requests over an internal TCP channel.
+//!
+//! # Boot and Initialization Sequence
+//! 1. **Logging Initialization**: Configures `env_logger` for secure in-enclave diagnostics.
+//! 2. **Configuration Ingestion**: Ingests network bindings, storage paths, and execution mode
+//!    via [`Config::load`].
+//! 3. **NIST SP 800-90B Health Check**: Runs Repetition Count Tests (RCT, $C=16$) and Adaptive
+//!    Proportion Tests (APT, $W=512, C=13$) on the hardware TRNG entropy source.
+//! 4. **Policy Engine Enforcement**: Instantiates [`PolicyEngine`] to guarantee FIPS 140-3
+//!    zeroization, cryptoperiod constraints, and storage encryption invariants.
+//! 5. **Sealing Key Provider Setup**: Derives root sealing material from hardware `EGETKEY`
+//!    instructions (`KEYPOLICY_MRSIGNER`) or a simulation master key file.
+//! 6. **Sealed Store Initialization**: Mounts the persistent sealed record repository [`Store`].
+//! 7. **Authentication Subsystem**: Initializes [`EnclaveTokenService`], loading or generating
+//!    the hardware-sealed Ed25519 token signing key.
+//! 8. **HTTP/TLS Server Launch**: Binds the listening socket and begins servicing incoming requests
+//!    via multi-threaded connection dispatch.
 
 use std::sync::Arc;
 
@@ -30,6 +49,12 @@ use crate::sealing::{HwSealingProvider, SealingKeyProvider, SimSealingProvider};
 use crate::server::EnclaveState;
 use crate::store::Store;
 
+/// Main entry point for the Intel SGX enclave application.
+///
+/// # Security Invariants
+/// - Halts immediately if TRNG entropy health checks (NIST SP 800-90B) fail.
+/// - Panics if in-memory protection validation or token service initialization fails.
+/// - In HW mode, master key derivation is strictly bound to the CPU fused root keys and MRSIGNER.
 fn main() {
     env_logger::init();
 
@@ -82,3 +107,4 @@ fn main() {
     // ── Start HTTP/TLS server ─────────────────────────────────────────────────
     server::start_server(state);
 }
+

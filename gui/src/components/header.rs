@@ -1,13 +1,25 @@
+//! Top Navigation Header Component.
+//!
+//! # Responsibilities
+//! Renders the application logo, platform banner, SGX status badge, RA-TLS pill,
+//! and AI assistant toggle button.
+
 use yew::prelude::*;
 
+/// Properties accepted by the [`Header`] component.
 #[derive(Properties, PartialEq)]
 pub struct HeaderProps {
+    /// Identifier of the currently active navigation tab.
     pub active_tab: String,
+    /// Callback invoked when a tab is selected.
     pub on_tab_change: Callback<String>,
+    /// SGX execution mode string (e.g., `HW_ACTIVE`).
     pub sgx_mode: String,
+    /// Callback invoked when the user toggles the Traces AI drawer.
     pub on_toggle_ai: Callback<()>,
 }
 
+/// Navigation header component for the web console.
 #[function_component(Header)]
 pub fn header(props: &HeaderProps) -> Html {
     let on_ai_click = {

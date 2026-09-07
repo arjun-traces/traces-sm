@@ -1,6 +1,12 @@
+//! Executive System Dashboard Component.
+//!
+//! # Responsibilities
+//! Fetches and renders real-time counts of active sealed secrets and managed keys.
+
 use crate::api::{get_keys, get_secrets};
 use yew::prelude::*;
 
+/// Dashboard component displaying high-level system metrics.
 #[function_component(Dashboard)]
 pub fn dashboard() -> Html {
     let secrets_count = use_state(|| 0);

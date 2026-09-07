@@ -1,3 +1,9 @@
+"""Bounty Program Deduplicator and Merger.
+
+Normalizes program URLs, canonical identifiers, and merges scope summaries
+and reward figures across overlapping sources.
+"""
+
 import logging
 from typing import Dict, List
 from src.models import BountyProgram

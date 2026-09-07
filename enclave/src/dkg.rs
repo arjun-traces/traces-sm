@@ -1,3 +1,31 @@
+//! # Distributed Key Generation (DKG), Shamir Secret Sharing & Pedersen VSS
+//!
+//! This module implements $M$-of-$N$ threshold secret sharing and Verifiable Secret Sharing (VSS)
+//! executed inside the Intel SGX enclave.
+//!
+//! ## Mathematical Foundations
+//!
+//! ### 1. Shamir's Secret Sharing over $GF(256)$
+//! For arbitrary byte slices, each byte index $b$ is treated as the secret term $a_0 = S[b]$
+//! in a random polynomial of degree $t - 1$:
+//! $$f_b(x) = a_0 + a_1 x + a_2 x^2 + \dots + a_{t-1} x^{t-1} \pmod{P(x)}$$
+//! where $P(x) = x^8 + x^4 + x^3 + x + 1$ ($0x11B$, AES irreducible polynomial).
+//!
+//! ### 2. Lagrange Polynomial Interpolation over $GF(256)$
+//! Given $t$ valid distinct shares $(x_i, y_i)$, the secret is reconstructed at $x = 0$ via:
+//! $$L_i(0) = \prod_{j \ne i} \frac{x_j}{x_j \oplus x_i}$$
+//! $$S[b] = \bigoplus_{i=0}^{t-1} y_{i,b} \otimes L_i(0)$$
+//!
+//! ### 3. Pedersen Verifiable Secret Sharing (VSS) on Ristretto255
+//! Participant shares $(x_i, s_i, r_i)$ are verified against published coefficient commitments
+//! $C_k = a_k G + b_k H$ using the homomorphic identity:
+//! $$s_i G + r_i H = \sum_{k=0}^{t-1} x_i^k C_k$$
+//!
+//! ## Invariants & Safety Guarantees
+//! - Evaluation points must be non-zero ($x \in [1, 255]$).
+//! - Duplicate $x$ coordinates are rejected during reconstruction to prevent degenerate matrices.
+//! - All random coefficients are sourced from the in-enclave NIST SP 800-90A HMAC-DRBG.
+
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_TABLE;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
@@ -5,28 +33,41 @@ use curve25519_dalek::traits::Identity;
 use serde::{Deserialize, Serialize};
 
 use crate::error::EnclaveError;
-
 use crate::drbg::HmacDrbg;
 
+/// Multi-byte participant threshold key share over Galois Field $GF(256)$.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct KeyShare {
+    /// Non-zero participant index $x \in [1, 255]$.
     pub x: u8,
+    /// Evaluated polynomial share bytes $y = f(x)$.
     pub y: Vec<u8>,
 }
 
+/// Participant share structure supporting both classic Shamir shares and Pedersen VSS blinding scalars.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SecretShare {
+    /// Non-zero participant index $x \in [1, 255]$.
     pub x: u8,
+    /// Evaluated share byte for legacy single-byte interfaces.
     pub y: u8,
+    /// Optional hex-encoded Ristretto255 blinding scalar $r_i$ for Pedersen VSS.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blinding_hex: Option<String>,
+    /// Optional hex-encoded Ristretto255 secret scalar $s_i$ for Pedersen VSS.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scalar_y_hex: Option<String>,
 }
 
 /// Splits an arbitrary multi-byte secret key slice (`&[u8]`) into `total` threshold shares (`KeyShare`),
-/// evaluating Shamir's Secret Sharing over GF(256) for each byte of the secret payload.
-/// Random coefficients are generated using NIST SP 800-90A HMAC_DRBG (`drbg.rs`).
+/// evaluating Shamir's Secret Sharing over $GF(256)$ for each byte of the secret payload.
+///
+/// # Invariants & Parameters
+/// * `secret` - Non-empty byte slice to split.
+/// * `threshold` - Minimum number of shares required for reconstruction ($1 \le t \le total$).
+/// * `total` - Total number of participant shares to generate ($total \le 255$).
+///
+/// Random polynomial coefficients are generated using in-enclave NIST SP 800-90A HMAC-DRBG.
 pub fn split_secret_bytes(secret: &[u8], threshold: usize, total: usize) -> Vec<KeyShare> {
     if secret.is_empty() || threshold == 0 || total < threshold || total > 255 {
         return Vec::new();
@@ -68,7 +109,13 @@ pub fn split_secret_bytes(secret: &[u8], threshold: usize, total: usize) -> Vec<
 }
 
 /// Reconstructs a multi-byte secret key (`Vec<u8>`) from `threshold` or more `KeyShare` instances
-/// using Lagrange polynomial interpolation over GF(256).
+/// using Lagrange polynomial interpolation over Galois Field $GF(256)$.
+///
+/// # Validation Invariants
+/// - Verifies `shares.len() >= threshold`.
+/// - Checks that no share has $x = 0$.
+/// - Enforces uniqueness of participant evaluation coordinates $x_i$.
+/// - Enforces uniform share byte length across all threshold shares.
 pub fn reconstruct_secret_bytes(shares: &[KeyShare], threshold: usize) -> Result<Vec<u8>, String> {
     if threshold == 0 {
         return Err("Threshold cannot be zero".to_string());
@@ -136,6 +183,7 @@ pub fn split_secret(secret: u8, threshold: usize, total: usize) -> Vec<SecretSha
         })
         .collect()
 }
+
 
 /// Backward-compatible single-byte secret reconstruction function.
 pub fn reconstruct_secret(shares: &[SecretShare], threshold: usize) -> u8 {

@@ -1,10 +1,11 @@
-//! ZKP and Homomorphic Encryption handlers.
+//! Zero-Knowledge Proofs (ZKP) and Partially Homomorphic Encryption (PHE) Handlers.
 //!
-//! These handlers expose the full ZKP + HE capability set:
-//!   - Schnorr PoK   — prove knowledge of a secret without revealing it
-//!   - Pedersen       — commit to values with additive homomorphism
-//!   - Bulletproofs   — non-interactive range proofs, no trusted setup
-//!   - Paillier PHE   — additively homomorphic encryption
+//! # Capabilities
+//! Exposes cryptographic endpoints for advanced privacy-preserving computing:
+//! - **Schnorr PoK**: Non-interactive proof of knowledge generation and verification over Ristretto255.
+//! - **Bulletproofs Range Proofs**: Proves value intervals $v \in [\text{min}, \text{max}]$ without revealing secrets.
+//! - **Pedersen Commitments**: Perfectly hiding additively homomorphic value commitments.
+//! - **Paillier PHE**: Partially homomorphic 2048-bit keygen, ciphertext addition, and sealed decryption.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -17,18 +18,13 @@ use crate::server::EnclaveState;
 use crate::zkp::{bulletproof, pedersen, schnorr};
 use num_bigint::BigUint;
 
-// In-memory Paillier key store (keyed by name).
-// In production this would be sealed to disk.
-use once_cell::sync::Lazy;
-use std::sync::Mutex;
 
-static PAILLIER_KEYS: Lazy<Mutex<HashMap<String, (paillier::PaillierPublicKey, Vec<u8>)>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schnorr PoK
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Generates a Schnorr Proof-of-Knowledge for a named secret stored inside the enclave.
 pub fn schnorr_prove(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -56,6 +52,7 @@ pub fn schnorr_prove(
     })?)
 }
 
+/// Verifies a Schnorr Proof-of-Knowledge against either a stored secret's commitment or an explicit public point.
 pub fn schnorr_verify(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -100,6 +97,7 @@ pub fn schnorr_verify(
 // Bulletproof range proof
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Generates a Bulletproofs zero-knowledge range proof for an integer value stored inside the enclave.
 pub fn range_prove(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -123,6 +121,7 @@ pub fn range_prove(
     Ok(serde_json::to_value(&proof)?)
 }
 
+/// Verifies a Bulletproofs range proof without knowledge of the secret plaintext integer.
 pub fn range_verify(
     req: &HttpRequest,
     _state: &Arc<EnclaveState>,
@@ -142,6 +141,7 @@ pub fn range_verify(
 // Pedersen commitments
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Computes a Pedersen commitment $C = v \cdot G + r \cdot H$ and returns $(C, r)$.
 pub fn pedersen_commit(
     req: &HttpRequest,
     _state: &Arc<EnclaveState>,
@@ -158,6 +158,7 @@ pub fn pedersen_commit(
 // Paillier PHE
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Generates a 2048-bit Paillier keypair, hardware-seals the private key, and stores public parameters.
 pub fn he_generate(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -202,6 +203,7 @@ pub fn he_generate(
     })?)
 }
 
+/// Encrypts an integer under a Paillier public key: $c = g^m \cdot r^n \bmod n^2$.
 pub fn he_encrypt(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -216,6 +218,7 @@ pub fn he_encrypt(
     })?)
 }
 
+/// Computes homomorphic addition of two Paillier ciphertexts: $c_3 = c_1 \cdot c_2 \bmod n^2$.
 pub fn he_add(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -236,6 +239,7 @@ pub fn he_add(
     })?)
 }
 
+/// Decrypts a Paillier ciphertext using the hardware-sealed private key inside the enclave.
 pub fn he_decrypt(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -261,6 +265,7 @@ pub fn he_decrypt(
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Parses and loads a stored Paillier public key from metadata.
 fn load_paillier_pk(
     state: &Arc<EnclaveState>,
     key_name: &str,
@@ -287,3 +292,4 @@ fn load_paillier_pk(
     let n_sq = &n * &n;
     Ok(paillier::PaillierPublicKey { n, g, n_sq })
 }
+

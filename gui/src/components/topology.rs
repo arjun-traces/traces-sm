@@ -1,6 +1,13 @@
+//! DKG Cluster Node Topology Component.
+//!
+//! # Protocols
+//! Renders registered DKG peer nodes participating in $(t, n)$ threshold secret sharing
+//! and FROST Ed25519 signing quorums.
+
 use crate::api::get_dkg_nodes;
 use yew::prelude::*;
 
+/// View component displaying DKG node cards and their RA-TLS attestation status.
 #[function_component(TopologyView)]
 pub fn topology_view() -> Html {
     let nodes = use_state(Vec::new);

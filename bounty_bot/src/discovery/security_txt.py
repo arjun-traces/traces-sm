@@ -1,3 +1,10 @@
+"""RFC 9116 security.txt Discovery Scanner.
+
+Scans internet domains for standard `/.well-known/security.txt` vulnerability
+disclosure policy declarations, parsing security contact endpoints, canonical links,
+and policy scopes.
+"""
+
 import logging
 import re
 from typing import List, Optional

@@ -1,3 +1,9 @@
+"""Domain Data Models and Schemas for Bounty Bot.
+
+Provides Pydantic models for representing standardized bug bounty programs,
+Vulnerability Disclosure Policies (VDPs), platform enums, and lifecycle statuses.
+"""
+
 from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
@@ -5,6 +11,7 @@ from pydantic import BaseModel, Field
 
 
 class PlatformEnum(str, Enum):
+    """Supported vulnerability coordination platforms and discovery sources."""
     HACKERONE = "HackerOne"
     BUGCROWD = "Bugcrowd"
     INTIGRITI = "Intigriti"
@@ -17,6 +24,7 @@ class PlatformEnum(str, Enum):
 
 
 class ProgramTypeEnum(str, Enum):
+    """Categorization of vulnerability disclosure initiatives."""
     BUG_BOUNTY = "Bug Bounty"
     VDP = "VDP (Unpaid)"
     GRANT = "Grant"
@@ -24,12 +32,14 @@ class ProgramTypeEnum(str, Enum):
 
 
 class StatusEnum(str, Enum):
+    """Operational status of a bounty program."""
     ACTIVE = "Active"
     PAUSED = "Paused"
     DEPRECATED = "Deprecated"
 
 
 class BountyProgram(BaseModel):
+    """Unified schema representing an individual vulnerability disclosure or bounty program."""
     id: str = Field(..., description="Unique slug for the program")
     name: str = Field(..., description="Name of the vulnerability bounty program")
     organization: str = Field(..., description="Organization offering the program")

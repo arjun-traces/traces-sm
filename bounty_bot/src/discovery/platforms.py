@@ -1,3 +1,9 @@
+"""Known Platform Aggregator Discovery Source.
+
+Aggregates structured programs from public feeds, high-profile self-hosted VDPs
+(Google, Microsoft, Meta, Apple), Web3 bounties (Ethereum/Immunefi), and community lists.
+"""
+
 import logging
 from typing import List
 import httpx

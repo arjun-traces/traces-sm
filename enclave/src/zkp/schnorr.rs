@@ -1,23 +1,29 @@
-//! Schnorr Proof-of-Knowledge (PoK).
+//! Schnorr Zero-Knowledge Proof-of-Knowledge (PoK) Protocol.
 //!
-//! # What this proves
-//! A prover demonstrates knowledge of a secret `s` such that:
+//! # Protocol Overview and Mathematical Foundations
+//! This module implements a non-interactive zero-knowledge Proof-of-Knowledge (PoK) of a
+//! discrete logarithm over the prime-order Ristretto255 group $\mathbb{G}$ of order $p = 2^{252} + 27742317777372353535851937790883648493$.
 //!
-//!   commitment = Hash(s)  AND  the corresponding Schnorr keypair is valid
+//! ## Mathematical Relation
+//! Given a secret seed $s \in \{0,1\}^*$, the prover computes a deterministic scalar $x = \text{SHA-512}(s)[0..32] \pmod p$
+//! and establishes the public commitment (verification key):
+//! $$Y = x \cdot G \in \mathbb{G}$$
+//! where $G$ is the standard Ristretto255 basepoint generator.
 //!
-//! Concretely, we treat `s` as a 32-byte seed, derive a Ristretto255
-//! keypair, and use a Schnorr signature as the PoK.  The *commitment* is
-//! the public key (compressed Ristretto point), which is stored in the
-//! enclave alongside the sealed secret.
+//! ## Non-Interactive $\Sigma$-Protocol (Fiat-Shamir via Merlin Transcript)
+//! 1. **Commitment**: Prover chooses ephemeral nonce $k \xleftarrow{\$} \mathbb{Z}_p$ and computes $R = k \cdot G$.
+//! 2. **Challenge**: Challenge $e = H(\text{transcript} \mathbin{\Vert} Y \mathbin{\Vert} R \mathbin{\Vert} \text{challenge\_nonce}) \in \mathbb{Z}_p$
+//!    is derived via Merlin transcript binding.
+//! 3. **Response**: Prover computes scalar response $z = k + e \cdot x \pmod p$.
+//! 4. **Verification**: Verifier checks that:
+//!    $$z \cdot G \stackrel{?}{=} R + e \cdot Y$$
 //!
-//! # Verification
-//! The verifier holds only the commitment (public key) and the proof
-//! (Schnorr signature over the transcript).  It can verify without ever
-//! seeing `s`.
-//!
-//! # Crate
-//! Uses `schnorrkel` (dalek ecosystem — Ristretto255, uniform-random
-//! signing, batch verification).
+//! # Invariants and Security Properties
+//! - **Completeness**: An honest prover holding $s$ will always produce a proof verifying against $Y = x \cdot G$.
+//! - **Special Soundness**: From two valid transcripts $(R, e, z)$ and $(R, e', z')$ with $e \neq e'$,
+//!   the witness $x = (z - z')(e - e')^{-1} \pmod p$ can be extracted in polynomial time.
+//! - **Zero-Knowledge**: The verifier learns nothing about $s$ or $x$ beyond knowledge validity.
+//! - **Replay Protection**: The `challenge_nonce` is bound into the Merlin transcript context `"sm:zkp:schnorr:v1"`.
 
 use schnorrkel::{ExpansionMode, MiniSecretKey, PublicKey, Signature};
 use serde::{Deserialize, Serialize};
@@ -28,20 +34,21 @@ use crate::error::EnclaveError;
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// The commitment stored alongside a secret in the enclave store.
-/// It is the compressed Ristretto255 public key derived from the secret.
+/// Public Schnorr commitment stored alongside a secret in the enclave repository.
+///
+/// Corresponds to the 32-byte compressed Ristretto255 public point $Y = x \cdot G$.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchnorrCommitment {
-    /// 32-byte compressed Ristretto255 point (hex-encoded for JSON).
+    /// 32-byte compressed Ristretto255 point encoded as a 64-character lowercase hex string.
     pub point_hex: String,
 }
 
-/// A Schnorr proof-of-knowledge.
+/// A non-interactive zero-knowledge Schnorr proof-of-knowledge.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchnorrProof {
-    /// 64-byte Schnorr signature bytes (hex-encoded).
+    /// 64-byte Schnorr signature $(R, z)$ encoded as a 128-character lowercase hex string.
     pub signature_hex: String,
-    /// The context label used when generating the proof.
+    /// Domain separation context label bound into the Merlin transcript (default: `"sm:zkp:schnorr:v1"`).
     pub context: String,
 }
 
@@ -49,10 +56,11 @@ pub struct SchnorrProof {
 // Commitment generation (stored when a secret is created)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Derive a Ristretto255 commitment from `secret_bytes`.
+/// Derives a deterministic Ristretto255 public commitment $Y = x \cdot G$ from arbitrary secret bytes.
 ///
-/// The commitment is stable for a given secret and serves as the public
-/// binding that a ZKP will later be checked against.
+/// # Security Invariant
+/// The resulting commitment is safe for untrusted public storage and verifier distribution;
+/// computing the discrete logarithm $x$ from $Y$ is computationally infeasible under the DLP on Ristretto255.
 pub fn generate_commitment(secret_bytes: &[u8]) -> Result<SchnorrCommitment, EnclaveError> {
     let mini = derive_mini_secret(secret_bytes)?;
     let kp = mini.expand_to_keypair(ExpansionMode::Ed25519);
@@ -65,11 +73,14 @@ pub fn generate_commitment(secret_bytes: &[u8]) -> Result<SchnorrCommitment, Enc
 // Proof generation (runs INSIDE the enclave — has access to the secret)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Generate a Schnorr PoK for the given `secret_bytes`.
+/// Generates a Schnorr Proof-of-Knowledge for the given `secret_bytes` bound to `challenge_nonce`.
 ///
-/// `challenge_nonce` is a fresh random value supplied by the verifier
-/// (or the enclave itself for non-interactive proofs).  It is bound into
-/// the transcript to prevent replay.
+/// # Parameters
+/// - `secret_bytes`: The secret plaintext witness known to the enclave.
+/// - `challenge_nonce`: Verifier-supplied challenge or record UUID bound into transcript to prevent replay attacks.
+///
+/// # Errors
+/// Returns [`EnclaveError::ZkpProve`] if cryptographic key expansion or signing fails.
 pub fn prove_knowledge(
     secret_bytes: &[u8],
     challenge_nonce: &[u8],
@@ -93,10 +104,17 @@ pub fn prove_knowledge(
 // Proof verification (verifier only needs the commitment)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Verify that a `proof` was produced by someone who knows the secret
-/// corresponding to `commitment`.
+/// Verifies that `proof` was produced by an entity with knowledge of the secret witness behind `commitment`.
 ///
-/// `challenge_nonce` must be the same value used in `prove_knowledge`.
+/// # Parameters
+/// - `commitment`: The public commitment point $Y = x \cdot G$.
+/// - `proof`: The Schnorr signature proof $(R, z)$.
+/// - `challenge_nonce`: The exact challenge nonce bound during proof generation.
+///
+/// # Returns
+/// - `Ok(true)` if $z \cdot G = R + e \cdot Y$.
+/// - `Ok(false)` if signature verification fails.
+/// - `Err(EnclaveError)` if hexadecimal decoding or point decompression fails.
 pub fn verify_proof(
     commitment: &SchnorrCommitment,
     proof: &SchnorrProof,
@@ -123,8 +141,7 @@ pub fn verify_proof(
 // Internal helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Deterministically derive a `MiniSecretKey` from arbitrary-length bytes
-/// via SHA-512 hashing (schnorrkel requires exactly 32 bytes).
+/// Deterministically derives a [`MiniSecretKey`] from arbitrary-length bytes via SHA-512.
 fn derive_mini_secret(bytes: &[u8]) -> Result<MiniSecretKey, EnclaveError> {
     use ring::digest;
     let hash = digest::digest(&digest::SHA512, bytes);
@@ -135,6 +152,7 @@ fn derive_mini_secret(bytes: &[u8]) -> Result<MiniSecretKey, EnclaveError> {
     MiniSecretKey::from_bytes(&seed)
         .map_err(|_| EnclaveError::ZkpProve("cannot create MiniSecretKey from seed".into()))
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tests

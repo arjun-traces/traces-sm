@@ -1,3 +1,9 @@
+"""Endpoint Liveness and Health Checker.
+
+Verifies that program URLs and security policy pages remain reachable,
+flagging 404/unresponsive endpoints as deprecated or paused.
+"""
+
 import logging
 from typing import List
 import httpx

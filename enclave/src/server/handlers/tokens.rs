@@ -1,4 +1,9 @@
-//! Token handlers.
+//! In-Enclave Ed25519 Authentication Token Handlers.
+//!
+//! # Purpose
+//! Handles in-enclave JWT token operations:
+//! - Issues cryptographically verifiable Ed25519 signed tokens with granular RBAC/ABAC scopes.
+//! - Tracks and enforces JTI revocation deny-lists inside the protected Enclave Page Cache (EPC).
 
 use chrono::{Duration, Utc};
 use std::sync::Arc;
@@ -8,6 +13,7 @@ use crate::models::{CreateTokenRequest, TokenResponse};
 use crate::server::router::HttpRequest;
 use crate::server::EnclaveState;
 
+/// Issues a new Ed25519-signed JWT token for the requested subject and scope list.
 pub fn create(
     req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -31,6 +37,7 @@ pub fn create(
     })?)
 }
 
+/// Returns instructional metadata regarding token registry inspection.
 pub fn list(
     _req: &HttpRequest,
     _state: &Arc<EnclaveState>,
@@ -40,6 +47,7 @@ pub fn list(
     Ok(serde_json::json!({ "message": "Token listing is managed by the host API at /v1/tokens" }))
 }
 
+/// Revokes an active token by adding its unique JTI identifier to the in-enclave revocation deny-list.
 pub fn revoke(
     _req: &HttpRequest,
     state: &Arc<EnclaveState>,
@@ -48,3 +56,4 @@ pub fn revoke(
     state.token_service.revoke_token(jti);
     Ok(serde_json::json!({ "token_id": jti, "revoked": true }))
 }
+

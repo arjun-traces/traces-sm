@@ -1,21 +1,31 @@
-//! Bulletproof range proofs.
+//! Bulletproofs Non-Interactive Zero-Knowledge Range Proofs.
 //!
-//! A range proof proves that a committed value `v` satisfies:
+//! # Protocol Overview and Mathematical Foundations
+//! Bulletproofs (Bünz, Bootle, Boneh, Poelstra, Wu, Maxwell, 2018) are short non-interactive
+//! zero-knowledge proofs that require **no trusted setup**.
 //!
-//!   min ≤ v ≤ max
+//! ## Mathematical Formulation
+//! A range proof convinces a verifier that a secret committed value $v \in \mathbb{Z}_p$ satisfies:
+//! $$v \in [0, 2^n - 1]$$
+//! without revealing any information about $v$.
 //!
-//! without revealing `v` itself.  This is used for example to prove that
-//! a token's TTL is still within a valid window, or that a key's size
-//! satisfies a policy — without disclosing the actual values.
+//! Given public generators $\mathbf{g}, \mathbf{h} \in \mathbb{G}^n$ and Pedersen commitment $V = v \cdot G + \gamma \cdot H$,
+//! the prover decomposes $v$ into its binary representation:
+//! $$v = \sum_{i=0}^{n-1} a_{L, i} \cdot 2^i, \quad a_{L, i} \in \{0, 1\}$$
+//! and establishes the vector constraints $\mathbf{a}_R = \mathbf{a}_L - \mathbf{1}^n$ and $\mathbf{a}_L \circ \mathbf{a}_R = \mathbf{0}^n$.
 //!
-//! # Protocol
-//! We use the `bulletproofs` crate (dalek ecosystem) which implements the
-//! Bulletproofs protocol by Bünz et al. (2018).  No trusted setup is
-//! required.
+//! ## Arbitrary Range $[v_{\text{min}}, v_{\text{max}}]$ Mapping
+//! Bulletproofs natively prove range inclusion $0 \le v' < 2^{\text{RANGE\_BITS}}$ where $\text{RANGE\_BITS} = 32$.
+//! To prove $v \in [v_{\text{min}}, v_{\text{max}}]$:
+//! 1. Set $v' = v - v_{\text{min}}$.
+//! 2. Ensure $(v_{\text{max}} - v_{\text{min}}) < 2^{\text{RANGE\_BITS}}$.
+//! 3. Bind $v_{\text{min}}$ and $v_{\text{max}}$ into the Merlin Fiat-Shamir transcript.
+//! 4. Prove $0 \le v' < 2^{\text{RANGE\_BITS}}$.
 //!
-//! # Range encoding
-//! Bulletproofs natively prove  0 ≤ v < 2^n.  To prove  min ≤ v ≤ max
-//! we prove  0 ≤ (v - min) < 2^n  where  2^n > (max - min).
+//! ## Complexity Guarantees
+//! - **Proof Size**: $O(\log n)$ elements (672 bytes for 32-bit ranges).
+//! - **Prover Time**: $O(n)$ multi-scalar multiplications.
+//! - **Verifier Time**: $O(n)$ multi-exponentiations.
 
 use bulletproofs::{BulletproofGens, PedersenGens, RangeProof};
 use curve25519_dalek_ng::ristretto::CompressedRistretto;
@@ -26,26 +36,26 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::EnclaveError;
 
-// Number of bits used for range proofs.  Must be a power of two ≤ 64.
-// 32 bits supports values up to ~4.3 billion (sufficient for TTLs, sizes).
+/// Bit-width for range proofs. Supports integers up to $2^{32}-1 \approx 4.29 \times 10^9$.
 const RANGE_BITS: usize = 32;
-// Label for the Merlin transcript — must match between prover and verifier.
+
+/// Domain separation label for the Merlin Fiat-Shamir transcript.
 const TRANSCRIPT_LABEL: &[u8] = b"sm:bulletproof:range:v1";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// A serialisable range proof.
+/// Serialized non-interactive zero-knowledge range proof payload.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SerializedRangeProof {
-    /// Bulletproof bytes (hex-encoded).
+    /// Bulletproof byte payload encoded as a hexadecimal string.
     pub proof_hex: String,
-    /// Pedersen commitment to the adjusted value (hex-encoded Ristretto point).
+    /// Pedersen commitment point $V = v' \cdot G + \gamma \cdot H$ encoded as a 64-character hex string.
     pub commitment_hex: String,
-    /// The `min` bound (public).
+    /// Public lower bound $v_{\text{min}}$ (inclusive).
     pub min: u64,
-    /// The `max` bound (public).
+    /// Public upper bound $v_{\text{max}}$ (inclusive).
     pub max: u64,
 }
 
@@ -53,10 +63,19 @@ pub struct SerializedRangeProof {
 // Proof generation (inside enclave — has the plaintext value)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Prove that `value` is in `[min, max]`.
+/// Proves in zero knowledge that a secret `value` lies in the closed interval $[v_{\text{min}}, v_{\text{max}}]$.
 ///
-/// Returns a `SerializedRangeProof` that can be sent to an untrusted verifier
-/// without revealing `value`.
+/// # Parameters
+/// - `value`: The secret integer witness known to the enclave.
+/// - `min`: Public lower bound.
+/// - `max`: Public upper bound.
+///
+/// # Invariants
+/// - Requires $v_{\text{min}} \le \text{value} \le v_{\text{max}}$.
+/// - Requires $(v_{\text{max}} - v_{\text{min}}) < 2^{32}$.
+///
+/// # Errors
+/// Returns [`EnclaveError::ZkpInvalidInput`] if bounds are violated or [`EnclaveError::ZkpProve`] if proof generation fails.
 pub fn prove_range(value: u64, min: u64, max: u64) -> Result<SerializedRangeProof, EnclaveError> {
     if max < min {
         return Err(EnclaveError::ZkpInvalidInput("max must be ≥ min".into()));
@@ -111,10 +130,12 @@ pub fn prove_range(value: u64, min: u64, max: u64) -> Result<SerializedRangeProo
 // Proof verification (can run on untrusted side — no secret needed)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Verify a range proof.
+/// Verifies a [`SerializedRangeProof`] without knowledge of the secret value or blinding factor.
 ///
-/// Returns `true` iff the proof is valid — i.e. the committer knows a value
-/// in `[proof.min, proof.max]`.
+/// # Returns
+/// - `Ok(true)` if the commitment $V$ legitimately commits to some value $v \in [\text{min}, \text{max}]$.
+/// - `Ok(false)` if the verification equations fail.
+/// - `Err(EnclaveError)` if hexadecimal parsing or point decoding fails.
 pub fn verify_range_proof(proof: &SerializedRangeProof) -> Result<bool, EnclaveError> {
     if proof.max < proof.min {
         return Err(EnclaveError::ZkpInvalidInput("max must be >= min".into()));
@@ -160,6 +181,7 @@ pub fn verify_range_proof(proof: &SerializedRangeProof) -> Result<bool, EnclaveE
         Err(_) => Ok(false),
     }
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tests

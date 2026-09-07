@@ -1,5 +1,13 @@
+//! Zero-Knowledge Proof & Homomorphic Encryption Sandbox Component.
+//!
+//! # Protocols
+//! - **Schnorr PoK**: Non-interactive zero-knowledge proofs of discrete logarithm knowledge.
+//! - **Bulletproofs**: Zero-knowledge range proofs without trusted setup.
+//! - **Paillier PHE**: Additively homomorphic ciphertext addition and scalar multiplication.
+
 use yew::prelude::*;
 
+/// Interactive playground component for testing in-enclave ZKP and PHE operations.
 #[function_component(ZkpSandboxView)]
 pub fn zkp_sandbox_view() -> Html {
     let logs = use_state(Vec::new);

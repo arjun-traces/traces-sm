@@ -1,8 +1,33 @@
+//! `traces-sm` CLI Entry Point and Command-Line Interface.
+//!
+//! # Architecture & Operator Model
+//! The `traces-sm` binary provides a command-line interface for operators and administrators
+//! interacting with the untrusted host gateway and Intel SGX cryptographic enclave backend.
+//!
+//! # Responsibilities
+//! - **Command-Line Parsing**: Leverages `clap` v4 with derive macros for type-safe CLI routing.
+//! - **HTTP/REST Client Delegation**: Dispatches parsed commands through [`client::ApiClient`]
+//!   to the configured host service URL (default: `http://localhost:8080`).
+//! - **ANSI Color Terminal Formatting**: Renders ASCII art banners and colored status badges
+//!   (`green` for success, `cyan` for metadata, `yellow` for telemetry/signatures, `red` for shredding).
+//! - **Domain Workflows**:
+//!   - Sealed secrets CRUD (`secret`)
+//!   - In-enclave asymmetric/symmetric keypair generation and signing (`key`)
+//!   - NIST SP 800-57 lifecycle transitions & SP 800-88 cryptographic shredding (`lifecycle`)
+//!   - DKG threshold cluster node status (`dkg`)
+//!   - NIST SP 800-90B DRBG continuous entropy health telemetry (`entropy`)
+//!   - Zero-Knowledge proofs & Homomorphic Encryption (`zkp`)
+//!   - Intel SGX DCAP remote attestation quotes (`attest`)
+//!   - Service liveness/readiness health probes (`health`)
+
 use clap::{Parser, Subcommand};
 use colored::*;
 
 mod client;
 
+/// Generates the stylized ASCII key banner displayed upon CLI invocation.
+///
+/// Returns a multi-line formatted string styled with ANSI color codes.
 fn get_ascii_key_banner() -> String {
     format!(
         "{}\n{}\n{}\n{}\n{}\n",
@@ -18,6 +43,7 @@ fn get_ascii_key_banner() -> String {
     )
 }
 
+/// Root command-line parser for `traces-sm`.
 #[derive(Parser)]
 #[command(
     name = "traces-sm",
@@ -29,6 +55,7 @@ fn get_ascii_key_banner() -> String {
     help_template = "{before-help}\n{bin} {version}\n{author-with-newline}{about-section}\n\n{usage-heading} {usage}\n\n{all-args}{after-help}"
 )]
 struct Cli {
+    /// Command subcommand to execute.
     #[command(subcommand)]
     command: Commands,
 
@@ -42,50 +69,52 @@ struct Cli {
     server: String,
 }
 
+/// Top-level subcommands supported by the `traces-sm` CLI binary.
 #[derive(Subcommand)]
 enum Commands {
-    /// Manage sealed secrets (create, read, update, delete, list)
+    /// Manage sealed secrets (create, read, update, delete, list).
     Secret {
         #[command(subcommand)]
         action: SecretCommands,
     },
-    /// In-enclave Key Generation & Cryptographic Operations
+    /// In-enclave Key Generation & Cryptographic Operations.
     Key {
         #[command(subcommand)]
         action: KeyCommands,
     },
-    /// NIST SP 800-57 Key Lifecycle Management & Crypto-Shredding
+    /// NIST SP 800-57 Key Lifecycle Management & Crypto-Shredding.
     Lifecycle {
         #[command(subcommand)]
         action: LifecycleCommands,
     },
-    /// Distributed Key Generation (DKG) & Node Topology
+    /// Distributed Key Generation (DKG) & Node Topology.
     Dkg {
         #[command(subcommand)]
         action: DkgCommands,
     },
-    /// NIST SP 800-90B DRBG Entropy Health Monitoring
+    /// NIST SP 800-90B DRBG Entropy Health Monitoring.
     Entropy {
         #[command(subcommand)]
         action: EntropyCommands,
     },
-    /// Zero-Knowledge Proofs & Homomorphic Encryption (Schnorr, Bulletproofs, Paillier)
+    /// Zero-Knowledge Proofs & Homomorphic Encryption (Schnorr, Bulletproofs, Paillier).
     Zkp {
         #[command(subcommand)]
         action: ZkpCommands,
     },
-    /// Inspect Intel DCAP Remote Attestation Quotes
+    /// Inspect Intel DCAP Remote Attestation Quotes.
     Attest {
         #[command(subcommand)]
         action: AttestCommands,
     },
-    /// Check system health and enclave connectivity
+    /// Check system health and enclave connectivity.
     Health,
 }
 
+/// Secret management subcommands.
 #[derive(Subcommand)]
 enum SecretCommands {
-    /// Create and seal a new secret inside the SGX enclave
+    /// Create and seal a new secret inside the SGX enclave.
     Create {
         /// Secret identifier / name
         #[arg(short, long)]
@@ -100,19 +129,20 @@ enum SecretCommands {
         #[arg(long, default_value = "86400")]
         ttl: u64,
     },
-    /// Retrieve metadata for a sealed secret
+    /// Retrieve metadata for a sealed secret.
     Get {
         /// Secret identifier / name
         #[arg(short, long)]
         name: String,
     },
-    /// List sealed secret records
+    /// List sealed secret records.
     List,
 }
 
+/// Key management and cryptographic operation subcommands.
 #[derive(Subcommand)]
 enum KeyCommands {
-    /// Generate a new keypair inside SGX EPC memory (RSA, ECDSA, Ed25519, ML-KEM, ML-DSA-3, ML-DSA-87)
+    /// Generate a new keypair inside SGX EPC memory (RSA, ECDSA, Ed25519, ML-KEM, ML-DSA-3, ML-DSA-87).
     Generate {
         /// Key alias / identifier
         #[arg(short, long)]
@@ -121,13 +151,13 @@ enum KeyCommands {
         #[arg(short, long, default_value = "rsa-4096")]
         algorithm: String,
     },
-    /// Export public key PEM format
+    /// Export public key PEM format.
     Public {
         /// Key alias / identifier
         #[arg(short, long)]
         name: String,
     },
-    /// Sign a message hash inside the SGX enclave
+    /// Sign a message hash inside the SGX enclave.
     Sign {
         /// Key alias / identifier
         #[arg(short, long)]
@@ -136,7 +166,7 @@ enum KeyCommands {
         #[arg(short, long)]
         message: String,
     },
-    /// Verify a signature against a message and key alias
+    /// Verify a signature against a message and key alias.
     Verify {
         /// Key alias / identifier
         #[arg(short, long)]
@@ -150,9 +180,10 @@ enum KeyCommands {
     },
 }
 
+/// NIST SP 800-57 key lifecycle and SP 800-88 sanitization subcommands.
 #[derive(Subcommand)]
 enum LifecycleCommands {
-    /// Transition key lifecycle state (PreOperational, Operational, Deactivated, Expired, Revoked)
+    /// Transition key lifecycle state (PreOperational, Operational, Deactivated, Expired, Revoked).
     Transition {
         /// Target key ID
         #[arg(short, long)]
@@ -161,7 +192,7 @@ enum LifecycleCommands {
         #[arg(short, long)]
         state: String,
     },
-    /// Execute NIST SP 800-88 Crypto-Shredding (overwrite storage sectors before delete)
+    /// Execute NIST SP 800-88 Crypto-Shredding (overwrite storage sectors before delete).
     Shred {
         /// Target key ID to crypto-shred
         #[arg(short, long)]
@@ -169,21 +200,24 @@ enum LifecycleCommands {
     },
 }
 
+/// Distributed Key Generation cluster management subcommands.
 #[derive(Subcommand)]
 enum DkgCommands {
-    /// List DKG threshold peer nodes and RA-TLS connection status
+    /// List DKG threshold peer nodes and RA-TLS connection status.
     Nodes,
 }
 
+/// Entropy health telemetry subcommands.
 #[derive(Subcommand)]
 enum EntropyCommands {
-    /// Check NIST SP 800-90B DRBG continuous health status (APT & RCT tests)
+    /// Check NIST SP 800-90B DRBG continuous health status (APT & RCT tests).
     Health,
 }
 
+/// Zero-Knowledge proof generation subcommands.
 #[derive(Subcommand)]
 enum ZkpCommands {
-    /// Generate Schnorr Proof-of-Knowledge for a secret token
+    /// Generate Schnorr Proof-of-Knowledge for a secret token.
     Prove {
         /// Secret token string
         #[arg(short, long)]
@@ -191,12 +225,16 @@ enum ZkpCommands {
     },
 }
 
+/// Remote attestation inspection subcommands.
 #[derive(Subcommand)]
 enum AttestCommands {
-    /// Inspect raw Intel DCAP Quote (MRENCLAVE, MRSIGNER, ISVSVN)
+    /// Inspect raw Intel DCAP Quote (MRENCLAVE, MRSIGNER, ISVSVN).
     Quote,
 }
 
+/// CLI main asynchronous entry point.
+///
+/// Dispatches the user-specified subcommand to the remote host gateway via HTTP client.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     println!("{}", get_ascii_key_banner());

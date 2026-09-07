@@ -1,44 +1,88 @@
+//! # In-Enclave Domain Models, Request/Response DTOs & Serialization Schemas
+//!
+//! This module defines the canonical domain models, cryptographic algorithm enumerations,
+//! and wire request/response Data Transfer Objects (DTOs) used for inter-process communication
+//! across the enclave boundary via JSON-RPC, REST, and mTLS endpoints.
+//!
+//! ## Invariants & Serialization Guarantees
+//! - **Schema Stability**: All structs implement [`Serialize`] and [`Deserialize`].
+//! - **Backwards Compatibility**: DTO fields use `#[serde(alias = "...")]` and `#[serde(default)]`
+//!   to handle diverse client payloads across Rust CLI, Desktop GUI, Web GUI, and external SDKs.
+//! - **Strict Typing**: Cryptographic algorithms and secret categories are strongly typed enums
+//!   preventing ambiguous parameter parsing.
+
 use serde::{Deserialize, Serialize};
 
+/// Secret category classification for access policy and storage routing.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum SecretType {
+    /// Arbitrary opaque binary or text data.
     Opaque,
+    /// Symmetric encryption key (e.g. AES, ChaCha20).
     SymmetricKey,
+    /// Asymmetric key pair or private key (e.g. RSA, ECDSA, Ed25519).
     AsymmetricKey,
+    /// X.509 Certificate bundle or CA chain.
     CertBundle,
+    /// SSH private/public key pair.
     SshKeyPair,
 }
 
+/// Comprehensive enumeration of cryptographic algorithms supported by the enclave.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum KeyAlgorithm {
     // Classic Asymmetric
+    /// RSA 2048-bit keypair (PKCS#1 / PKCS#8 OAEP).
     Rsa2048,
+    /// RSA 4096-bit keypair (PKCS#1 / PKCS#8 OAEP).
     Rsa4096,
+    /// NIST P-256 (secp256r1) elliptic curve.
     EcdsaP256,
+    /// NIST P-384 (secp384r1) elliptic curve.
     EcdsaP384,
+    /// NIST P-521 (secp521r1) elliptic curve.
     EcdsaP521,
+    /// Bitcoin / Ethereum secp256k1 Koblitz curve.
     Secp256k1,
+    /// Edwards-curve Digital Signature Algorithm over Curve25519 (RFC 8032).
     Ed25519,
+    /// X25519 Diffie-Hellman key exchange (RFC 7748).
     X25519,
     // Post-Quantum (NIST FIPS 203/204/205)
+    /// NIST FIPS 203 ML-KEM-512 (Kyber-512).
     MlKem512,
+    /// NIST FIPS 203 ML-KEM-768 (Kyber-768).
     MlKem768,
+    /// NIST FIPS 203 ML-KEM-1024 (Kyber-1024).
     MlKem1024,
+    /// NIST FIPS 204 ML-DSA-3 (Dilithium-3).
     MlDsa3,
+    /// NIST FIPS 204 ML-DSA-5 (Dilithium-5).
     MlDsa5,
+    /// NIST FIPS 205 SLH-DSA (SPHINCS+).
     SlhDsa,
     // Symmetric & Key Wrap (SP 800-38F)
+    /// AES-128 in Galois/Counter Mode.
     Aes128Gcm,
+    /// AES-256 in Galois/Counter Mode.
     Aes256Gcm,
+    /// AES-128 Key Wrap (NIST SP 800-38F).
     Aes128Kw,
+    /// AES-256 Key Wrap (NIST SP 800-38F).
     Aes256Kw,
+    /// HMAC using SHA-256 hash.
     HmacSha256,
+    /// HMAC using SHA-512 hash.
     HmacSha512,
+    /// ChaCha20-Poly1305 authenticated symmetric cipher (RFC 8439).
     ChaCha20Poly1305,
     // Threshold DKG
+    /// FROST threshold signature scheme over Ed25519.
     FrostEd25519,
+    /// Pedersen Verifiable Secret Sharing.
     PedersenVss,
 }
+
 
 impl std::fmt::Display for KeyAlgorithm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

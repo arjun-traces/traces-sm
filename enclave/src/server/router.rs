@@ -1,4 +1,17 @@
-//! HTTP request router — parses raw HTTP/1.1 and dispatches to handlers.
+//! In-Enclave HTTP/1.1 Request Router and Protocol Engine.
+//!
+//! # Purpose and Protocol Handling
+//! This module implements a zero-external-dependency HTTP/1.1 wire protocol parser and
+//! REST API request dispatcher, parsing raw TCP streams using [`httparse`] and mapping
+//! URI paths and HTTP verbs to their corresponding cryptographically isolated handler functions.
+//!
+//! # Security and Invariants
+//! - **Request Buffer Limit**: Caps incoming raw HTTP request buffers at $64\,\text{KiB}$
+//!   to prevent unbounded memory allocation inside the restricted Enclave Page Cache (EPC).
+//! - **Standardized JSON Envelope**: All successful responses return a JSON envelope `{"success": true, "data": ...}`
+//!   and error responses return `ApiResponse::err(code, message)` with appropriate HTTP status codes.
+//! - **Header Hardening**: Injects `X-Enclave: traces-sm-enclave-v{version}` and explicit `Content-Length`
+//!   on all outgoing responses.
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -13,14 +26,20 @@ use crate::server::EnclaveState;
 // Minimal HTTP request / response structures
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Minimal in-enclave representation of an incoming HTTP/1.1 request.
 pub struct HttpRequest {
+    /// HTTP request method in uppercase (e.g., `"GET"`, `"POST"`, `"PUT"`, `"DELETE"`).
     pub method: String,
+    /// Request URI target path (e.g., `"/v1/secrets"`).
     pub path: String,
+    /// List of HTTP request header key-value pairs.
     pub headers: Vec<(String, String)>,
+    /// Raw HTTP request body bytes.
     pub body: Vec<u8>,
 }
 
 impl HttpRequest {
+    /// Retrieves a header value by case-insensitive name match.
     pub fn header(&self, name: &str) -> Option<&str> {
         let name_lower = name.to_lowercase();
         self.headers
@@ -29,6 +48,7 @@ impl HttpRequest {
             .map(|(_, v)| v.as_str())
     }
 
+    /// Extracts Bearer token from the `Authorization: Bearer <jwt>` request header.
     pub fn bearer_token(&self) -> Option<&str> {
         self.header("Authorization")
             .and_then(|v| v.strip_prefix("Bearer "))
@@ -39,6 +59,11 @@ impl HttpRequest {
 // Connection handler
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Handles an active client TCP stream: reads bytes, parses HTTP request, dispatches to handler, and transmits response.
+///
+/// # Invariants
+/// - Buffers at most $64\,\text{KiB}$ from the stream.
+/// - Guarantees stream flush and close upon completion.
 pub fn handle_connection(
     mut stream: TcpStream,
     state: Arc<EnclaveState>,
@@ -62,6 +87,7 @@ pub fn handle_connection(
 // Request parsing (minimal HTTP/1.1)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Parses a raw byte slice into an [`HttpRequest`] using [`httparse`].
 fn parse_request(raw: &[u8]) -> Result<HttpRequest, EnclaveError> {
     let mut headers = [httparse::EMPTY_HEADER; 64];
     let mut req = httparse::Request::new(&mut headers);
@@ -106,6 +132,7 @@ fn parse_request(raw: &[u8]) -> Result<HttpRequest, EnclaveError> {
 // Dispatcher
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Routes an [`HttpRequest`] to the appropriate domain handler based on HTTP verb and path segments.
 fn dispatch(req: &HttpRequest, state: Arc<EnclaveState>) -> String {
     // Segment the path: "/v1/secrets/some-id" → ["v1", "secrets", "some-id"]
     let segments: Vec<&str> = req
@@ -212,6 +239,7 @@ fn dispatch(req: &HttpRequest, state: Arc<EnclaveState>) -> String {
 // Response formatting
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Formats a status code and serializable JSON payload into an RFC 7230 compliant HTTP/1.1 response string.
 fn http_response(status: u16, body: &impl serde::Serialize) -> String {
     let json = serde_json::to_string_pretty(body)
         .unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string());
@@ -231,3 +259,4 @@ fn http_response(status: u16, body: &impl serde::Serialize) -> String {
         json
     )
 }
+

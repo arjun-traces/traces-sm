@@ -1,3 +1,10 @@
+//! libFuzzer Target for JSON Payload Parsing and Field Extraction.
+//!
+//! # Invariants Under Test
+//! - **Panic Freedom**: Untrusted JSON byte slices fed to `serde_json::from_slice::<Value>`
+//!   must never cause stack overflows, memory exhaustion, or panics.
+//! - **Round-Trip Stability**: Valid JSON values must survive serialization without data corruption.
+
 #![no_main]
 use libfuzzer_sys::fuzz_target;
 use serde_json::Value;

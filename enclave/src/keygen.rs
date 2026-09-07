@@ -1,3 +1,24 @@
+//! # In-Enclave Cryptographic Key Generation and Signing Engine
+//!
+//! This module implements hardware-isolated key generation, PKCS#8 encoding, hardware sealing,
+//! and digital signature computation across standard asymmetric and symmetric algorithms.
+//!
+//! ## Invariants & Security Guarantees
+//!
+//! 1. **Zero-Trust Private Key Handling**:
+//!    - Private key bytes generated within the enclave are wrapped in [`zeroize::Zeroizing`].
+//!    - Unsealed private keys exist in EPC RAM only for the duration of the cryptographic operation
+//!      and are scrubbed before returning from function scope.
+//! 2. **Purpose-Isolated Sealing**:
+//!    - Each algorithm family uses distinct domain-separated sealing contexts:
+//!      - RSA: `"seal:rsa-privkey"`
+//!      - ECDSA: `"seal:ecdsa-privkey"`
+//!      - Ed25519: `"seal:ed25519-privkey"`
+//!      - Symmetric / HMAC: `"seal:symmetric-key"`
+//! 3. **Standard Encoding**:
+//!    - Public keys are exported as standard PEM-encoded SubjectPublicKeyInfo (X.509) format.
+//!    - Private keys are persisted only as hardware-sealed ciphertext blobs.
+
 use base64::Engine;
 use ring::rand::{SecureRandom, SystemRandom};
 use ring::signature::{self, KeyPair};
@@ -9,11 +30,19 @@ use crate::error::EnclaveError;
 use crate::models::KeyAlgorithm;
 use crate::sealing::{seal_data, unseal_data, SealingKeyProvider};
 
+/// Container for an in-enclave generated key pair.
 pub struct GeneratedKeyPair {
+    /// PEM-encoded public key string (SubjectPublicKeyInfo).
     pub public_key_pem: String,
+    /// Hardware-sealed private key ciphertext blob.
     pub sealed_private_key: Vec<u8>,
 }
 
+/// Generates a key pair and returns `(public_key_pem, sealed_private_key)`.
+///
+/// # Parameters
+/// * `algorithm` - Target cryptographic algorithm (RSA, ECDSA, Ed25519, AES, HMAC).
+/// * `provider` - Hardware sealing key provider.
 pub fn generate_keypair(
     algorithm: KeyAlgorithm,
     provider: &dyn SealingKeyProvider,
@@ -22,6 +51,7 @@ pub fn generate_keypair(
     Ok((pair.public_key_pem, pair.sealed_private_key))
 }
 
+/// Formats raw base64 data into a standardized 64-character line-wrapped PEM document.
 fn wrap_pem(label: &str, raw_b64: &str) -> String {
     let mut pem = format!("-----BEGIN {}-----\n", label);
     for chunk in raw_b64.as_bytes().chunks(64) {
@@ -34,6 +64,14 @@ fn wrap_pem(label: &str, raw_b64: &str) -> String {
     pem
 }
 
+/// Dispatches key generation to the appropriate algorithm backend.
+///
+/// # Supported Algorithms
+/// - RSA-2048, RSA-4096 (PKCS#1 / PKCS#8 via `rsa` crate)
+/// - ECDSA P-256, ECDSA P-384 (via `ring` crate)
+/// - Ed25519 (via `ring` crate)
+/// - FROST Ed25519 (via `frost-ed25519` crate)
+/// - AES-128, AES-256, ChaCha20-Poly1305, HMAC-SHA256, HMAC-SHA512
 pub fn generate_key_pair(
     algorithm: KeyAlgorithm,
     provider: &dyn SealingKeyProvider,
@@ -73,6 +111,7 @@ pub fn generate_key_pair(
         ))),
     }
 }
+
 
 fn generate_frost_ed25519(
     provider: &dyn SealingKeyProvider,

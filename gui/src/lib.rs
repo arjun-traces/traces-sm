@@ -1,3 +1,18 @@
+//! `traces-sm` WebAssembly Frontend Application (Yew / Web-Sys).
+//!
+//! # Architecture & UI Structure
+//! Provides a reactive Single-Page Application (SPA) compiled to WebAssembly via `wasm-bindgen`
+//! and `yew`.
+//!
+//! # Components & Routing
+//! - [`Header`]: Top navigation bar displaying SGX hardware mode, RA-TLS status, and AI toggle.
+//! - [`Dashboard`]: System overview of sealed secrets and key counts.
+//! - [`LifecycleView`]: NIST SP 800-57 key lifecycle transition and SP 800-88 crypto-shredding table.
+//! - [`TopologyView`]: DKG 2-of-3 threshold peer node cluster status.
+//! - [`EntropyView`]: NIST SP 800-90B DRBG continuous health telemetry (APT & RCT).
+//! - [`ZkpSandboxView`]: Interactive Schnorr PoK, Bulletproofs, and Paillier PHE cryptographic sandbox.
+//! - [`TracesAiPanel`]: Side drawer for querying enclave telemetry and key metadata.
+
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 
@@ -12,6 +27,9 @@ use components::topology::TopologyView;
 use components::traces_ai::TracesAiPanel;
 use components::zkp_sandbox::ZkpSandboxView;
 
+/// Root component for the `traces-sm` WebAssembly GUI.
+///
+/// Manages active tab state, AI panel drawer toggle, and routes views dynamically.
 #[function_component(App)]
 pub fn app() -> Html {
     let active_tab = use_state(|| "dashboard".to_string());
@@ -132,6 +150,7 @@ pub fn app() -> Html {
     }
 }
 
+/// WebAssembly entry point initializing logger and mounting the [`App`] component to the DOM.
 #[wasm_bindgen(start)]
 pub fn run_app() {
     wasm_logger::init(wasm_logger::Config::default());

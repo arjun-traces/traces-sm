@@ -1,3 +1,9 @@
+"""Gemini-Powered Unstructured Policy Parser.
+
+Extracts structured program metadata, scope lists, reward tiers, and contact channels
+from unstructured HTML and plain-text policy documents using Gemini structured JSON outputs.
+"""
+
 import json
 import logging
 import os
