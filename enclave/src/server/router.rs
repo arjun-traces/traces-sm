@@ -1,4 +1,4 @@
-﻿//! HTTP request router — parses raw HTTP/1.1 and dispatches to handlers.
+//! HTTP request router — parses raw HTTP/1.1 and dispatches to handlers.
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -136,7 +136,16 @@ fn dispatch(req: &HttpRequest, state: Arc<EnclaveState>) -> String {
         ("POST",   ["v1", "zkp", "he", "generate"])          => handlers::zkp::he_generate(req, &state),
         ("POST",   ["v1", "zkp", "he", "encrypt"])           => handlers::zkp::he_encrypt(req, &state),
         ("POST",   ["v1", "zkp", "he", "add"])               => handlers::zkp::he_add(req, &state),
-        ("POST",   ["v1", "zkp", "he", "decrypt"])           => handlers::zkp::he_decrypt(req, &state),        // ── Entropy (NIST SP 800-90B) ──────────────────────────────────────────
+        ("POST",   ["v1", "zkp", "he", "decrypt"])           => handlers::zkp::he_decrypt(req, &state),
+
+        // ── DKG / FROST ───────────────────────────────────────────────────────
+        ("POST",   ["v1", "dkg", "frost", "setup"])          => handlers::dkg_handler::handle_frost_setup(req, &state),
+        ("POST",   ["v1", "dkg", "frost", "commit"])         => handlers::dkg_handler::handle_frost_commit(req, &state),
+        ("POST",   ["v1", "dkg", "frost", "sign"])           => handlers::dkg_handler::handle_frost_sign(req, &state),
+        ("POST",   ["v1", "dkg", "frost", "aggregate"])      => handlers::dkg_handler::handle_frost_aggregate(req, &state),
+        ("POST",   ["v1", "dkg", "frost", "verify"])         => handlers::dkg_handler::handle_frost_verify(req, &state),
+
+        // ── Entropy (NIST SP 800-90B) ──────────────────────────────────────────
         ("GET",  ["v1", "entropy", "health"])     => {
             let status = crate::drbg::init_drbg_health_check();
             Ok(serde_json::json!({ "rct_passed": status.rct_passed, "apt_passed": status.apt_passed, "reseed_count": status.reseed_count, "source": "SGX_RDRAND_RDSEED" }))

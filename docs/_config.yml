@@ -1,6 +1,11 @@
-﻿title: "traces-sm — 100% Rust-Native SGX Secrets Manager"
-description: "Hardware-Enforced Multi-OS Key & Secret Management Framework Compliant with NIST SP 800-57 / SP 800-130 / FIPS 140-3"
-theme: jekyll-theme-cayman
-permalink: pretty
-show_downloads: true
-google_analytics:
+title: "traces-sm"
+description: "traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP."
+url: "https://arjun-traces.github.io"
+baseurl: "/traces-sm"
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+markdown: kramdown
+theme: null

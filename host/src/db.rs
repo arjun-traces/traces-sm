@@ -4,11 +4,24 @@ use once_cell::sync::Lazy;
 
 pub static DB_CONN: Lazy<Mutex<Connection>> = Lazy::new(|| {
     let conn = Connection::open("metadata.db").expect("Failed to open DB");
+    // Enable Write-Ahead Logging (WAL) and busy timeout to avoid database lock errors under concurrency
+    conn.execute_batch(
+        "PRAGMA journal_mode = WAL;
+         PRAGMA busy_timeout = 5000;
+         PRAGMA synchronous = NORMAL;
+         PRAGMA foreign_keys = ON;"
+    ).expect("Failed to apply SQLite PRAGMAs");
     Mutex::new(conn)
 });
 
 pub fn init_db() -> Result<()> {
     let conn = DB_CONN.lock().unwrap();
+    // Ensure WAL PRAGMAs are active
+    let _ = conn.execute_batch(
+        "PRAGMA journal_mode = WAL;
+         PRAGMA busy_timeout = 5000;
+         PRAGMA synchronous = NORMAL;"
+    );
     
     conn.execute(
         "CREATE TABLE IF NOT EXISTS secrets_metadata (

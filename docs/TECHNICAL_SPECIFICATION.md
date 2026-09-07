@@ -1,4 +1,4 @@
-﻿# `traces-sm` — Technical Specification Document (10-Page Engineering Spec)
+# `traces-sm` — Technical Specification Document (10-Page Engineering Spec)
 ## 100% Rust-Native Multi-OS NIST SP 800-57 SGX Secrets & Key Management Framework
 
 ---
@@ -173,9 +173,11 @@ Node A (SGX Primary)                             Node B (DKG Peer)
 ```
 
 ## 5.2 Distributed Key Generation (DKG) Protocol Sequence
-1. **Round 1 (Polynomial Commitment)**: Each node $i$ generates a random polynomial $f_i(x) = a_{i,0} + a_{i,1}x + \dots + a_{i,M-1}x^{M-1}$ of degree $M-1$ and broadcasts Pedersen commitments $C_{i,k} = a_{i,k} \cdot G + r_{i,k} \cdot H$.
-2. **Round 2 (Share Distribution)**: Node $i$ securely sends evaluation share $s_{i,j} = f_i(j)$ to Node $j$ over the RA-TLS channel.
-3. **Share Verification & Key Derivation**: Node $j$ verifies received shares against commitments:
+1. **Key-Level & Byte-Level Scope**: Secret splitting supports full key payload slices (`&[u8]`) via `split_secret_bytes()` as well as single byte-level `split_secret()`, evaluating Shamir's Secret Sharing over GF(256) for each byte of key material.
+2. **NIST SP 800-90A DRBG Randomness**: Polynomial coefficient generation is strictly driven by the enclave's NIST SP 800-90A `HMAC_DRBG` (`drbg.rs`), eliminating dependency on OS PRNGs (`rand::thread_rng()`).
+3. **Round 1 (Polynomial Commitment)**: Each node $i$ generates a random polynomial $f_i(x) = a_{i,0} + a_{i,1}x + \dots + a_{i,M-1}x^{M-1}$ of degree $M-1$ and broadcasts Pedersen commitments $C_{i,k} = a_{i,k} \cdot G + r_{i,k} \cdot H$.
+4. **Round 2 (Share Distribution)**: Node $i$ securely sends evaluation share $s_{i,j} = f_i(j)$ to Node $j$ over the RA-TLS channel.
+5. **Share Verification & Key Derivation**: Node $j$ verifies received shares against commitments:
    $$s_{i,j} \cdot G + r_{i,j} \cdot H \stackrel{?}{=} \sum_{k=0}^{M-1} j^k \cdot C_{i,k}$$
    Upon verification, Node $j$ computes its master threshold share $x_j = \sum_{i=1}^N s_{i,j}$.
 

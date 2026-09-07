@@ -1,4 +1,4 @@
-﻿use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum SecretType {
@@ -69,3 +69,203 @@ impl std::fmt::Display for KeyAlgorithm {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DkgSetupRequest {
+    pub secret_id: uuid::Uuid,
+    pub threshold: usize,
+    pub total: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FrostDkgSetupRequest {
+    pub max_signers: u16,
+    pub min_signers: u16,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FrostCommitRequest {
+    pub key_package_json: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FrostSignShareRequest {
+    pub key_package_json: String,
+    pub nonces_json: String,
+    pub commitments_map_json: std::collections::BTreeMap<String, String>,
+    pub message_hex: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FrostAggregateRequest {
+    pub public_key_package_json: String,
+    pub commitments_map_json: std::collections::BTreeMap<String, String>,
+    pub signature_shares_json: std::collections::BTreeMap<String, String>,
+    pub message_hex: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FrostVerifyRequest {
+    pub group_public_key_hex: String,
+    pub signature_hex: String,
+    pub message_hex: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TransitionStateRequest {
+    pub new_state: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CryptoShredRequest {
+    pub id: uuid::Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EntropyStatusResponse {
+    pub rct_passed: bool,
+    pub apt_passed: bool,
+    pub reseed_count: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ApiResponse<T> {
+    pub success: bool,
+    pub data: Option<T>,
+    pub error: Option<String>,
+}
+
+impl<T> ApiResponse<T> {
+    pub fn ok(data: T) -> Self {
+        Self {
+            success: true,
+            data: Some(data),
+            error: None,
+        }
+    }
+
+    pub fn err(reason: impl Into<String>, _msg: impl Into<String>) -> Self {
+        Self {
+            success: false,
+            data: None,
+            error: Some(reason.into()),
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Handler DTOs
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CreateSecretRequest {
+    pub name: String,
+    pub secret_type: Option<SecretType>,
+    pub plaintext_base64: String,
+    pub owner: Option<String>,
+    pub tags: Option<std::collections::HashMap<String, String>>,
+    pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UpdateSecretRequest {
+    pub plaintext_base64: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SecretResponse {
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub plaintext_base64: Option<String>,
+    pub version: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SecretMetadata {
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub secret_type: SecretType,
+    pub version: u32,
+    pub owner: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GenerateKeyRequest {
+    pub name: String,
+    pub algorithm: KeyAlgorithm,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct KeyResponse {
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub public_key_pem: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SignRequest {
+    pub data_base64: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SignResponse {
+    pub signature_base64: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VerifyRequest {
+    pub data_base64: String,
+    pub signature_base64: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VerifyResponse {
+    pub valid: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EncryptRequest {
+    pub plaintext_base64: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EncryptResponse {
+    pub ciphertext_base64: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DecryptRequest {
+    pub ciphertext_base64: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DecryptResponse {
+    pub plaintext_base64: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CreateTokenRequest {
+    pub subject: String,
+    pub scopes: Vec<String>,
+    pub ttl_seconds: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TokenResponse {
+    pub token: String,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AttestationMeasurements {
+    pub mr_enclave: String,
+    pub mr_signer: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AttestationQuoteResponse {
+    pub quote_hex: String,
+    pub measurements: AttestationMeasurements,
+}
+
+

@@ -1,4 +1,4 @@
-﻿//! Enclave entrypoint.
+//! Enclave entrypoint.
 //!
 //! When compiled for `x86_64-fortanix-unknown-sgx`, this binary runs entirely
 //! inside the Intel SGX Enclave Page Cache (EPC).
@@ -19,6 +19,7 @@ pub mod server;
 pub mod drbg;
 pub mod nist;
 pub mod dkg;
+pub mod frost;
 pub mod pqc;
 pub mod policy;
 

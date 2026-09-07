@@ -1,53 +1,38 @@
-﻿<!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- Primary SEO Meta Tags -->
-    <title>traces-sm — 100% Rust-Native SGX Secrets & Key Management Framework</title>
-    <meta name="title" content="traces-sm — 100% Rust-Native SGX Secrets & Key Management Framework">
-    <meta name="description" content="traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP. NIST SP 800-57, FIPS 140-3 zeroization, and post-quantum crypto ready.">
-    <meta name="keywords" content="intel sgx, rust secrets manager, trusted execution environment, fortanix edp, nist sp 800-57, key management system, post quantum cryptography, zero knowledge proof, paillier homomorphic encryption">
-    <meta name="author" content="traces-sm team">
-    <link rel="canonical" href="https://arjun-traces.github.io/traces-sm/">
+---
+layout: default
+title: "traces-sm — Rust-native SGX secrets and key management framework"
+description: "traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP."
+url: "/"
+---
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://arjun-traces.github.io/traces-sm/">
-    <meta property="og:title" content="traces-sm — 100% Rust-Native SGX Secrets Manager">
-    <meta property="og:description" content="Hardware-enforced key & secret management framework running inside Intel SGX enclaves using Fortanix EDP. Compliant with NIST SP 800-57 and SP 800-90B DRBG.">
-    <meta property="og:image" content="https://arjun-traces.github.io/traces-sm/images/dashboard.svg">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://arjun-traces.github.io/traces-sm/">
-    <meta property="twitter:title" content="traces-sm — 100% Rust-Native SGX Secrets Manager">
-    <meta property="twitter:description" content="Hardware-enforced key & secret management framework running inside Intel SGX enclaves using Fortanix EDP. Compliant with NIST SP 800-57 and SP 800-90B DRBG.">
-    <meta property="twitter:image" content="https://arjun-traces.github.io/traces-sm/images/dashboard.svg">
-
-    <!-- Schema.org JSON-LD Structured Data for AEO Crawlers -->
-    <script type="application/ld+json">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
     {
-      "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "traces-sm",
+      "description": "traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.",
+      "codeRepository": "https://github.com/arjun-traces/traces-sm",
+      "programmingLanguage": "Rust",
+      "runtimePlatform": "x86_64-fortanix-unknown-sgx",
       "operatingSystem": "Linux, Windows, macOS",
       "applicationCategory": "SecurityApplication",
       "softwareVersion": "0.1.0",
-      "description": "traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.",
-      "license": "https://opensource.org/licenses/MIT",
+      "license": "https://www.apache.org/licenses/LICENSE-2.0",
       "url": "https://arjun-traces.github.io/traces-sm/",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "dateModified": "2026-08-25",
       "author": {
         "@type": "Organization",
         "name": "arjun-traces"
       }
-    }
-    </script>
-
-    <script type="application/ld+json">
+    },
     {
-      "@context": "https://schema.org",
       "@type": "FAQPage",
       "mainEntity": [
         {
@@ -55,323 +40,219 @@
           "name": "Is there an open-source secrets manager that runs inside an Intel SGX enclave?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. traces-sm is an open-source, 100% Rust-native key and secret management framework that isolates cryptographic operations inside an Intel SGX Enclave Page Cache (EPC) using Fortanix EDP."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How does traces-sm differ from HashiCorp Vault or OpenBao?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "HashiCorp Vault and OpenBao store encrypted secrets on disk, but process plaintext secrets in standard host RAM. If host RAM is inspected by a compromised OS or hypervisor, secrets can be leaked. traces-sm executes all decryption, key generation, and signing operations strictly inside an encrypted Intel SGX enclave."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How does traces-sm handle memory zeroization in Rust?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "All private key byte vectors in traces-sm wrap in zeroize::Zeroizing<T>. On drop, compiler intrinsics volatile-overwrite RAM registers with zero bytes before deallocation."
+            "text": "Yes. traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP."
           }
         }
       ]
     }
-    </script>
+  ]
+}
+</script>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        gray: {
-                            950: '#030712',
-                            900: '#0f172a',
-                            850: '#151e32',
-                            800: '#1e293b',
-                            700: '#334155'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body { background-color: #030712; color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
-        .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-        .gradient-text { background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    </style>
-</head>
-<body class="min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+<!-- Main Hero Section -->
+<section class="max-w-7xl mx-auto px-6 pt-20 pb-16 text-center space-y-8">
+    <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono font-semibold">
+        <span>🔒 Intel SGX Hardware Isolation & NIST SP 800-57 Alignment</span>
+    </div>
 
-    <!-- Top Navigation Header -->
-    <header class="border-b border-gray-800/80 bg-gray-950/80 backdrop-blur sticky top-0 z-50 px-6 py-4">
-        <div class="max-w-7xl mx-auto flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-indigo-600/20 rounded-xl border border-indigo-500/30 text-indigo-400 font-mono text-sm font-bold">
-                    SGX
-                </div>
-                <a href="#" class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                    traces-sm
-                    <span class="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">v0.1.0</span>
-                </a>
+    <!-- H1 containing the exact brand string -->
+    <h1 class="text-4xl md:text-6xl font-extrabold text-white tracking-tight max-w-4xl mx-auto leading-tight">
+        traces-sm — Rust-native SGX secrets and key management framework
+    </h1>
+
+    <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
+        <strong class="text-white">traces-sm</strong> is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.
+    </p>
+
+    <div class="flex flex-wrap justify-center gap-4 pt-4">
+        <a href="https://github.com/arjun-traces/traces-sm" target="_blank" rel="noopener noreferrer" class="btn-primary">
+            Get Started on GitHub
+        </a>
+        <a href="#architecture" class="btn-secondary">
+            Explore 5-Crate Architecture
+        </a>
+    </div>
+
+    <!-- Terminal Quickstart Box -->
+    <div class="max-w-2xl mx-auto pt-8">
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 text-left font-mono text-xs shadow-2xl space-y-2">
+            <div class="flex items-center justify-between text-gray-500 border-b border-gray-800 pb-2 mb-2">
+                <span class="flex items-center space-x-2">
+                    <span class="w-3 h-3 rounded-full bg-red-500/80 inline-block" style="background:#ef4444; width:12px; height:12px;"></span>
+                    <span class="w-3 h-3 rounded-full bg-yellow-500/80 inline-block" style="background:#f59e0b; width:12px; height:12px;"></span>
+                    <span class="w-3 h-3 rounded-full bg-green-500/80 inline-block" style="background:#10b981; width:12px; height:12px;"></span>
+                    <span class="ml-2 text-gray-400">quickstart.sh</span>
+                </span>
+                <span>bash</span>
             </div>
-
-            <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-300">
-                <a href="#features" class="hover:text-indigo-400 transition">Features</a>
-                <a href="#architecture" class="hover:text-indigo-400 transition">Architecture</a>
-                <a href="#comparison" class="hover:text-indigo-400 transition">Comparison</a>
-                <a href="#keygen" class="hover:text-indigo-400 transition">Key Catalog</a>
-                <a href="#faq" class="hover:text-indigo-400 transition">FAQ</a>
-                <a href="#docs" class="hover:text-indigo-400 transition">Docs</a>
-            </nav>
-
-            <div class="flex items-center space-x-4">
-                <a href="https://github.com/arjun-traces/traces-sm" target="_blank" class="px-4 py-2 rounded-xl bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-200 text-xs font-mono font-semibold flex items-center space-x-2 transition">
-                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    <span>GitHub</span>
-                </a>
-            </div>
+            <p class="text-gray-400"># Clone traces-sm repository and launch native desktop client</p>
+            <p class="text-indigo-300">git clone https://github.com/arjun-traces/traces-sm.git</p>
+            <p class="text-indigo-300">cd traces-sm/desktop &amp;&amp; cargo run --release</p>
         </div>
-    </header>
+    </div>
+</section>
 
-    <!-- Main Hero Section -->
-    <main>
-        <section class="max-w-7xl mx-auto px-6 pt-20 pb-16 text-center space-y-8">
-            <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono font-semibold">
-                <span>🔒 NIST SP 800-57 Aligned Enclave Architecture</span>
+<!-- Feature Grid Section -->
+<section id="features" class="max-w-7xl mx-auto px-6 py-16 border-t border-gray-800/60 space-y-12">
+    <div class="text-center space-y-3">
+        <h2 class="text-2xl md:text-3xl font-bold text-white">Hardware-Enforced Security Features</h2>
+        <p class="text-sm text-gray-400 max-w-2xl mx-auto">Engineered to isolate secrets from compromised host operating systems and hypervisors.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="card space-y-4">
+            <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-mono font-bold text-lg" style="width:3rem; height:3rem; padding:0.5rem;">
+                EPC
             </div>
-
-            <h1 class="text-4xl md:text-6xl font-extrabold text-white tracking-tight max-w-4xl mx-auto leading-tight">
-                100% Rust-Native SGX Secrets &amp; Key Management Framework
-            </h1>
-
-            <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-                <strong class="text-white">traces-sm</strong> is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.
+            <h3 class="text-lg font-bold text-white">Intel SGX EPC Isolation</h3>
+            <p class="text-xs text-gray-400 leading-relaxed">
+                All decryption, key generation, signing, and zeroization operations execute strictly within hardware-encrypted Enclave Page Cache (EPC) RAM using Fortanix EDP. Read how we design this in our guide to <a href="{{ '/sgx-key-management/' | relative_url }}" class="text-indigo-400 underline">building Intel SGX enclaves in pure Rust</a>.
             </p>
+        </div>
 
-            <div class="flex flex-wrap justify-center gap-4 pt-4">
-                <a href="https://github.com/arjun-traces/traces-sm" target="_blank" class="px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 transition">
-                    Get Started on GitHub
-                </a>
-                <a href="#docs" class="px-6 py-3.5 rounded-xl bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-200 font-semibold text-sm transition">
-                    View Specifications &amp; Docs
-                </a>
+        <div class="card space-y-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono font-bold text-lg" style="width:3rem; height:3rem; padding:0.5rem;">
+                NIST
             </div>
+            <h3 class="text-lg font-bold text-white">NIST SP 800-57 Lifecycle</h3>
+            <p class="text-xs text-gray-400 leading-relaxed">
+                Enforces a 4-phase key lifecycle state machine (PreOperational, Operational, Deactivated, Destroyed) with cryptoperiod tracking. Learn more on our <a href="{{ '/fips-140-3/' | relative_url }}" class="text-indigo-400 underline">FIPS 140-3 alignment overview</a>.
+            </p>
+        </div>
 
-            <!-- Terminal Quickstart Box -->
-            <div class="max-w-2xl mx-auto pt-8">
-                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 text-left font-mono text-xs shadow-2xl space-y-2">
-                    <div class="flex items-center justify-between text-gray-500 border-b border-gray-800 pb-2 mb-2">
-                        <span class="flex items-center space-x-2">
-                            <span class="w-3 h-3 rounded-full bg-red-500/80 inline-block"></span>
-                            <span class="w-3 h-3 rounded-full bg-yellow-500/80 inline-block"></span>
-                            <span class="w-3 h-3 rounded-full bg-green-500/80 inline-block"></span>
-                            <span class="ml-2 text-gray-400">quickstart.sh</span>
-                        </span>
-                        <span>bash</span>
-                    </div>
-                    <p class="text-gray-400"># Clone and run cross-platform desktop console (Ubuntu / Windows / macOS)</p>
-                    <p class="text-indigo-300">git clone https://github.com/arjun-traces/traces-sm.git</p>
-                    <p class="text-indigo-300">cd traces-sm/desktop &amp;&amp; cargo run --release</p>
-                </div>
+        <div class="card space-y-4">
+            <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 font-mono font-bold text-lg" style="width:3rem; height:3rem; padding:0.5rem;">
+                ZERO
             </div>
-        </section>
+            <h3 class="text-lg font-bold text-white">Volatile Memory Zeroization</h3>
+            <p class="text-xs text-gray-400 leading-relaxed">
+                Private key byte vectors wrap in <code class="inline">zeroize::Zeroizing&lt;T&gt;</code>, forcing compiler intrinsics to overwrite RAM registers on drop. Read our detailed guide on <a href="{{ '/rust-zeroize-secrets/' | relative_url }}" class="text-indigo-400 underline">how traces-sm zeroizes secrets in Rust</a>.
+            </p>
+        </div>
+    </div>
+</section>
 
-        <!-- Feature Grid Section -->
-        <section id="features" class="max-w-7xl mx-auto px-6 py-16 border-t border-gray-800/60 space-y-12">
-            <div class="text-center space-y-3">
-                <h2 class="text-2xl md:text-3xl font-bold text-white">Hardware-Enforced Security Features</h2>
-                <p class="text-sm text-gray-400 max-w-2xl mx-auto">Engineered to isolate secrets from compromised host operating systems and hypervisors.</p>
+<!-- Architecture Section (#architecture) -->
+<section id="architecture" class="max-w-7xl mx-auto px-6 py-16 border-t border-gray-800/60 space-y-8">
+    <div class="text-center space-y-3">
+        <h2 class="text-2xl md:text-3xl font-bold text-white">5-Crate Rust Workspace Architecture</h2>
+        <p class="text-sm text-gray-400 max-w-2xl mx-auto">
+            Strict separation between untrusted host proxy components and the in-enclave cryptographic core.
+        </p>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-6 text-xs font-mono">
+        <pre class="overflow-x-auto text-gray-300">
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                               100% RUST-NATIVE `traces-sm` WORKSPACE                             │
+│                                                                                                  │
+│  User & Client Interfaces                                                                        │
+│  ┌──────────────────────────┐  ┌──────────────────────────────┐  ┌─────────────────────────────┐  │
+│  │ Rust WebAssembly Web GUI │  │ Rust Native Desktop App      │  │ Rust Native CLI Tool        │  │
+│  │ (`gui/` -> Yew WASM)     │  │ (`desktop/` -> Ubuntu, Win,  │  │ (`cli/` -> Multi-OS Distros)│  │
+│  │                          │  │  macOS via `eframe`/`egui`)  │  │                             │  │
+│  └────────────┬─────────────┘  └──────────────┬───────────────┘  └──────────────┬──────────────┘  │
+│               │                               │                                 │                │
+├───────────────┼───────────────────────────────┼─────────────────────────────────┼────────────────┤
+│ Host Layer (Untrusted Proxy)                  │                                 │                │
+│               └───────────────────────────────┼─────────────────────────────────┘                │
+│                                               │ REST / mTLS                                      │
+│  ┌────────────────────────────────────────────▼───────────────────────────────────────────────┐  │
+│  │ Rust Native Host Proxy (`host/` -> Axum 0.7 + Tokio + Rusqlite)                            │  │
+│  │ • Serves WebAssembly Web GUI static assets on port 8080                                    │  │
+│  │ • Manages SQLite metadata DB, audit logs, and DKG topology                                  │  │
+│  └────────────────────────────────────────────┬───────────────────────────────────────────────┘  │
+│                                               │ Plain TCP / mTLS (Port 8443)                     │
+├───────────────────────────────────────────────┼──────────────────────────────────────────────────┤
+│ SGX Enclave Layer (Trusted EPC)               │                                                  │
+│  ┌────────────────────────────────────────────▼───────────────────────────────────────────────┐  │
+│  │ Rust SGX Enclave (`enclave/` -> Fortanix EDP `x86_64-fortanix-unknown-sgx`)               │  │
+│  │ • In-Enclave Key Generation Catalog Engine (`keygen.rs`)                                   │  │
+│  │ • Mandatory Security Policy Engine (`policy.rs`)                                           │  │
+│  │ • SP 800-90A HMAC-DRBG & SP 800-90B Health Tests (`drbg.rs`)                              │  │
+│  │ • Classic Asymmetric + Zero-Knowledge Proofs (`zkp/`)                                      │  │
+│  │ • Hardware Sealing (`sealing.rs`) & Sealed Storage (`store.rs`)                           │  │
+│  └────────────────────────────────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+        </pre>
+        <p class="text-gray-400 font-sans text-xs leading-relaxed">
+            The untrusted host proxy cannot inspect memory inside the Enclave Page Cache. Inter-node communications are protected via <a href="{{ '/remote-attestation/' | relative_url }}" class="text-indigo-400 underline">RA-TLS attestation quotes embedded in X.509 certificates</a>.
+        </p>
+    </div>
+</section>
+
+<!-- Comparison Teaser -->
+<section id="comparison-teaser" class="max-w-7xl mx-auto px-6 py-16 border-t border-gray-800/60 space-y-8">
+    <div class="text-center space-y-3">
+        <h2 class="text-2xl md:text-3xl font-bold text-white">Hardware Isolation vs Software Vaults</h2>
+        <p class="text-sm text-gray-400 max-w-2xl mx-auto">
+            Traditional secret managers process plaintext in host RAM. traces-sm isolates all decryption inside an Intel SGX enclave.
+        </p>
+    </div>
+
+    <div class="card p-8 text-center space-y-6 max-w-3xl mx-auto">
+        <p class="text-sm text-gray-300 leading-relaxed font-sans">
+            HashiCorp Vault and OpenBao store encrypted data at rest, but unpack secrets into standard OS RAM during operations. If a root hypervisor or OS is compromised, memory inspection tools can extract private keys. <strong class="text-white">traces-sm</strong> keeps all operational keys strictly inside SGX hardware memory.
+        </p>
+        <div>
+            <a href="{{ '/vs-hashicorp-vault/' | relative_url }}" class="btn-primary">
+                View Full Vault Comparison & Deficit Matrix →
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Key Catalog Teaser -->
+<section id="keygen-teaser" class="max-w-7xl mx-auto px-6 py-16 border-t border-gray-800/60 space-y-8">
+    <div class="text-center space-y-3">
+        <h2 class="text-2xl md:text-3xl font-bold text-white">In-Enclave Cryptographic Capabilities</h2>
+        <p class="text-sm text-gray-400 max-w-2xl mx-auto">Verified status of key algorithms implemented in enclave source code.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-mono">
+        <div class="card space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white font-sans">RSA & ECDSA</h3>
+                <span class="status-badge implemented">✓ Implemented</span>
             </div>
+            <p class="text-gray-400 font-sans">RSA-2048, RSA-4096 (OAEP), ECDSA P-256, P-384, P-521, Secp256k1 implemented via ring and rsa crates.</p>
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-6 space-y-4 hover:border-indigo-500/50 transition">
-                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-mono font-bold text-lg">
-                        EPC
-                    </div>
-                    <h3 class="text-lg font-bold text-white">Intel SGX EPC Isolation</h3>
-                    <p class="text-xs text-gray-400 leading-relaxed">
-                        All decryption, key pair generation, signing, and zeroization operations execute strictly within encrypted Enclave Page Cache (EPC) RAM using Fortanix EDP.
-                    </p>
-                </div>
-
-                <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-6 space-y-4 hover:border-indigo-500/50 transition">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono font-bold text-lg">
-                        NIST
-                    </div>
-                    <h3 class="text-lg font-bold text-white">NIST SP 800-57 Lifecycle</h3>
-                    <p class="text-xs text-gray-400 leading-relaxed">
-                        Enforces a 4-phase key lifecycle state machine (PreOperational, Operational, Deactivated, Destroyed) with automatic cryptoperiod volume meters and SP 800-88 crypto-shredding.
-                    </p>
-                </div>
-
-                <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-6 space-y-4 hover:border-indigo-500/50 transition">
-                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 font-mono font-bold text-lg">
-                        DRBG
-                    </div>
-                    <h3 class="text-lg font-bold text-white">SP 800-90B DRBG Entropy</h3>
-                    <p class="text-xs text-gray-400 leading-relaxed">
-                        Continuous Repetition Count Test (RCT) and Adaptive Proportion Test (APT) running on hardware RDRAND/RDSEED entropy sources.
-                    </p>
-                </div>
+        <div class="card space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white font-sans">ZK Proofs & SSS</h3>
+                <span class="status-badge partial">⚠️ Partial</span>
             </div>
-        </section>
+            <p class="text-gray-400 font-sans">Schnorr PoK and Bulletproofs implemented via schnorrkel and bulletproofs. Shamir SSS implemented; VSS commitment check stubbed.</p>
+        </div>
 
-        <!-- Technical Comparison Table -->
-        <section id="comparison" class="max-w-7xl mx-auto px-6 py-16 border-t border-gray-800/60 space-y-8">
-            <div class="text-center space-y-3">
-                <h2 class="text-2xl md:text-3xl font-bold text-white">Technical Comparison Matrix</h2>
-                <p class="text-sm text-gray-400 max-w-2xl mx-auto">How traces-sm compares against traditional vaults, cloud HSMs, and TEE products.</p>
+        <div class="card space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white font-sans">Post-Quantum (PQC)</h3>
+                <span class="status-badge not-implemented">⛔ Not implemented</span>
             </div>
+            <p class="text-gray-400 font-sans">PQC functions in enclave/src/pqc.rs are currently stubs returning dummy vectors or true. Read our <a href="{{ '/post-quantum-status/' | relative_url }}" class="text-indigo-400 underline">PQC status roadmap</a>.</p>
+        </div>
+    </div>
+</section>
 
-            <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-2xl">
-                <table class="w-full text-left text-xs font-mono">
-                    <thead class="bg-gray-950 text-gray-400 border-b border-gray-800">
-                        <tr>
-                            <th class="p-4">TECHNICAL FEATURE</th>
-                            <th class="p-4 text-indigo-400 font-bold">TRACES-SM</th>
-                            <th class="p-4">HASHICORP VAULT / OPENBAO</th>
-                            <th class="p-4">FORTANIX DSM</th>
-                            <th class="p-4">AWS CLOUDHSM</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-800 text-gray-300">
-                        <tr class="hover:bg-gray-800/40">
-                            <td class="p-4 font-bold text-white font-sans">Trust Boundary</td>
-                            <td class="p-4 text-emerald-400 font-bold">Intel SGX EPC Enclave</td>
-                            <td class="p-4 text-gray-400">Host OS / Hypervisor RAM</td>
-                            <td class="p-4 text-gray-400">Intel SGX Enclave</td>
-                            <td class="p-4 text-gray-400">Dedicated FIPS L3 HSM</td>
-                        </tr>
-                        <tr class="hover:bg-gray-800/40">
-                            <td class="p-4 font-bold text-white font-sans">Language Stack</td>
-                            <td class="p-4 text-indigo-300 font-bold">100% Pure Rust</td>
-                            <td class="p-4 text-gray-400">Go</td>
-                            <td class="p-4 text-gray-400">C / Rust / Java</td>
-                            <td class="p-4 text-gray-400">Proprietary Firmware</td>
-                        </tr>
-                        <tr class="hover:bg-gray-800/40">
-                            <td class="p-4 font-bold text-white font-sans">Host Introspection Defense</td>
-                            <td class="p-4 text-emerald-400 font-bold">✓ Hardware Encrypted</td>
-                            <td class="p-4 text-red-400">✗ Host RAM Vulnerable</td>
-                            <td class="p-4 text-emerald-400">✓ Hardware Encrypted</td>
-                            <td class="p-4 text-emerald-400">✓ Hardware Isolated</td>
-                        </tr>
-                        <tr class="hover:bg-gray-800/40">
-                            <td class="p-4 font-bold text-white font-sans">Zero-Knowledge Proofs</td>
-                            <td class="p-4 text-indigo-300 font-bold">✓ Schnorr &amp; Bulletproofs</td>
-                            <td class="p-4 text-gray-400">✗ None</td>
-                            <td class="p-4 text-gray-400">✗ None</td>
-                            <td class="p-4 text-gray-400">✗ None</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
+<!-- FAQ Teaser -->
+<section id="faq-teaser" class="max-w-7xl mx-auto px-6 py-16 border-t border-gray-800/60 space-y-8">
+    <div class="text-center space-y-3">
+        <h2 class="text-2xl md:text-3xl font-bold text-white">Frequently Asked Questions</h2>
+        <p class="text-sm text-gray-400 max-w-2xl mx-auto">Core questions regarding SGX enclave secret management.</p>
+    </div>
 
-        <!-- Key Generation Catalog -->
-        <section id="keygen" class="max-w-7xl mx-auto px-6 py-16 border-t border-gray-800/60 space-y-8">
-            <div class="text-center space-y-3">
-                <h2 class="text-2xl md:text-3xl font-bold text-white">In-Enclave Key Generation Catalog</h2>
-                <p class="text-sm text-gray-400 max-w-2xl mx-auto">Private keys are generated inside SGX memory and zeroized on drop.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs font-mono">
-                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-3">
-                    <h3 class="text-sm font-bold text-white font-sans flex items-center justify-between">
-                        <span>RSA &amp; ECDSA Key Pairs</span>
-                        <span class="text-emerald-400">✓ Implemented</span>
-                    </h3>
-                    <p class="text-gray-400">RSA-2048, RSA-4096 (OAEP), ECDSA P-256, P-384, P-521, Secp256k1.</p>
-                </div>
-                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-3">
-                    <h3 class="text-sm font-bold text-white font-sans flex items-center justify-between">
-                        <span>Edwards Curves &amp; Symmetric Key Wrap</span>
-                        <span class="text-emerald-400">✓ Implemented</span>
-                    </h3>
-                    <p class="text-gray-400">Ed25519, X25519, AES-128/256-GCM, AES-KW (SP 800-38F).</p>
-                </div>
-                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-3">
-                    <h3 class="text-sm font-bold text-white font-sans flex items-center justify-between">
-                        <span>Post-Quantum Cryptography (PQC)</span>
-                        <span class="text-yellow-400">⚠️ Experimental</span>
-                    </h3>
-                    <p class="text-gray-400">ML-KEM-768/1024, ML-DSA-3/5 (FIPS 203 / 204 API hooks).</p>
-                </div>
-                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-3">
-                    <h3 class="text-sm font-bold text-white font-sans flex items-center justify-between">
-                        <span>Threshold DKG &amp; ZK Proofs</span>
-                        <span class="text-indigo-400">✓ Implemented</span>
-                    </h3>
-                    <p class="text-gray-400">Shamir SSS, Pedersen VSS, Schnorr PoK, Bulletproofs 32-bit range proofs.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Question-Shaped FAQ Section for AEO Retrieval -->
-        <section id="faq" class="max-w-7xl mx-auto px-6 py-16 border-t border-gray-800/60 space-y-8">
-            <div class="text-center space-y-3">
-                <h2 class="text-2xl md:text-3xl font-bold text-white">Frequently Asked Questions (FAQ)</h2>
-                <p class="text-sm text-gray-400 max-w-2xl mx-auto">Structured questions for AI answer engines (Claude, ChatGPT, Perplexity, Gemini).</p>
-            </div>
-
-            <div class="space-y-6 max-w-4xl mx-auto text-sm">
-                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-2">
-                    <h3 class="text-base font-bold text-white">Is there an open-source secrets manager that runs inside an Intel SGX enclave?</h3>
-                    <p class="text-gray-400 leading-relaxed">
-                        Yes. <strong>traces-sm</strong> is an open-source, 100% Rust-native key and secret management framework designed to isolate cryptographic operations inside an Intel SGX Enclave Page Cache (EPC) using Fortanix EDP.
-                    </p>
-                </div>
-
-                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-2">
-                    <h3 class="text-base font-bold text-white">How does traces-sm differ from HashiCorp Vault or OpenBao?</h3>
-                    <p class="text-gray-400 leading-relaxed">
-                        HashiCorp Vault and OpenBao store encrypted secrets on disk, but process plaintext secrets in standard host RAM. If host RAM is inspected by a compromised OS or hypervisor, secrets can be leaked. <strong>traces-sm</strong> executes all decryption, key generation, and signing operations strictly inside an encrypted Intel SGX enclave.
-                    </p>
-                </div>
-
-                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-2">
-                    <h3 class="text-base font-bold text-white">How does traces-sm handle RAM zeroization in Rust?</h3>
-                    <p class="text-gray-400 leading-relaxed">
-                        All private key byte vectors in <strong>traces-sm</strong> wrap in <code class="font-mono text-indigo-300">zeroize::Zeroizing&lt;T&gt;</code>. On drop, compiler intrinsics volatile-overwrite memory registers with zero bytes before deallocation.
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Documentation Portal Index -->
-        <section id="docs" class="max-w-7xl mx-auto px-6 py-16 border-t border-gray-800/60 space-y-8">
-            <div class="text-center space-y-3">
-                <h2 class="text-2xl md:text-3xl font-bold text-white">Documentation &amp; Specifications Index</h2>
-                <p class="text-sm text-gray-400 max-w-2xl mx-auto">Access primary technical documents in the GitHub repository.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-mono">
-                <a href="https://github.com/arjun-traces/traces-sm/blob/main/docs/SPECIFICATION.md" target="_blank" class="p-5 bg-gray-900 border border-gray-800 rounded-2xl hover:border-indigo-500 transition space-y-2 block">
-                    <h3 class="text-sm font-bold text-indigo-300 font-sans">Technical Specification</h3>
-                    <p class="text-gray-400">10-page engineering spec covering enclave trust boundaries &amp; mTLS networking.</p>
-                </a>
-
-                <a href="https://github.com/arjun-traces/traces-sm/blob/main/docs/STANDARDS_MAPPING.md" target="_blank" class="p-5 bg-gray-900 border border-gray-800 rounded-2xl hover:border-indigo-500 transition space-y-2 block">
-                    <h3 class="text-sm font-bold text-indigo-300 font-sans">Standards Implementation Mapping</h3>
-                    <p class="text-gray-400">Line-item NIST SP 800-57, SP 800-90B, and FIPS 140-3 zeroization table.</p>
-                </a>
-
-                <a href="https://github.com/arjun-traces/traces-sm/blob/main/docs/STATUS.md" target="_blank" class="p-5 bg-gray-900 border border-gray-800 rounded-2xl hover:border-indigo-500 transition space-y-2 block">
-                    <h3 class="text-sm font-bold text-indigo-300 font-sans">Status &amp; Maturity Disclosure</h3>
-                    <p class="text-gray-400">Detailed breakdown of production-shaped vs experimental modules.</p>
-                </a>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="border-t border-gray-800/80 bg-gray-950 px-6 py-8 text-xs font-mono text-gray-500 text-center space-y-2">
-        <p>traces-sm v0.1.0  |  100% Rust-Native NIST SP 800-57 SGX Framework  |  Apache-2.0 / MIT License</p>
-        <p class="text-gray-600">Built on Fortanix EDP (`x86_64-fortanix-unknown-sgx` target)</p>
-    </footer>
-
-</body>
-</html>
+    <div class="card p-6 max-w-4xl mx-auto space-y-4">
+        <h3 class="text-base font-bold text-white font-sans">Is there an open-source secrets manager that runs inside an Intel SGX enclave?</h3>
+        <p class="text-sm text-gray-400 leading-relaxed font-sans">
+            Yes. <strong>traces-sm</strong> is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.
+        </p>
+        <div class="pt-2 text-xs font-sans">
+            <span class="text-gray-500">Explore more questions on: </span>
+            <a href="{{ '/fips-140-3/' | relative_url }}" class="text-indigo-400 hover:underline mr-3">FIPS Alignment</a>
+            <a href="{{ '/rust-zeroize-secrets/' | relative_url }}" class="text-indigo-400 hover:underline mr-3">RAM Zeroization</a>
+            <a href="{{ '/remote-attestation/' | relative_url }}" class="text-indigo-400 hover:underline">Remote Attestation</a>
+        </div>
+    </div>
+</section>

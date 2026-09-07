@@ -7,10 +7,12 @@ pub struct Client {
     http: ReqwestClient,
 }
 
+pub type ApiClient = Client;
+
 impl Client {
-    pub fn new(base_url: String) -> Self {
+    pub fn new(base_url: &str) -> Self {
         Self {
-            base_url,
+            base_url: base_url.to_string(),
             http: ReqwestClient::new(),
         }
     }

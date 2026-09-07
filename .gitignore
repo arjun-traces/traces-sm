@@ -1,8 +1,36 @@
-﻿/target/
-/gui/dist/
-*.db
-*.log
-*.tmp
-*.exe
-.DS_Store
+# Rust build artifacts
+target/
+**/*.rs.bk
+Cargo.lock.tmp
+
+# Node.js / Web build artifacts
 node_modules/
+dist/
+.parcel-cache/
+.vite/
+
+# Enclave simulation & runtime keys
+.sim_master_key
+*.sealed
+metadata.db
+metadata.db-shm
+metadata.db-wal
+
+# Python virtual environment & cache
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# Fuzzing artifacts & corpus
+fuzz/corpus/
+fuzz/artifacts/
+fuzz/target/

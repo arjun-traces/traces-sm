@@ -1,28 +1,191 @@
-﻿name: Continuous Integration
+name: CI & Build Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main, master ]
+  workflow_dispatch:
 
-env:
-  CARGO_TERM_COLOR: always
+permissions:
+  contents: read
 
 jobs:
-  build-and-test:
-    name: Build & Test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+  # ---------------------------------------------------------------------------
+  # Rust Workspace Build, Test, Clippy, and Formatting
+  # ---------------------------------------------------------------------------
+  rust-workspace:
+    name: Rust Workspace — Build, Test, Lint
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust Stable
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux GUI & Crypto Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev libx11-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libgtk-3-dev
+
+      - name: Setup Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
-      - name: Build Host, GUI, CLI & Desktop
-        run: cargo build --workspace --exclude sm-enclave
-      - name: Run Tests
-        run: cargo test --workspace --exclude sm-enclave
+          components: rustfmt, clippy
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build workspace (all targets)
+        run: cargo build --workspace --all-targets --locked
+
+      - name: Run test suite
+        run: cargo test --workspace --locked -- --nocapture
+
+      - name: Report ignored conformance gaps
+        if: always()
+        run: cargo test --workspace -- --ignored --list || true
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Formatting check
+        run: cargo fmt --all -- --check
+
+  # ---------------------------------------------------------------------------
+  # Supply chain security audit
+  # ---------------------------------------------------------------------------
+  rust-supply-chain:
+    name: Rust Supply Chain Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Known-vulnerability audit
+        run: cargo audit --deny warnings
+
+  # ---------------------------------------------------------------------------
+  # Python Bounty Bot Test Suite
+  # ---------------------------------------------------------------------------
+  python-bounty-bot:
+    name: Bounty Bot Test & Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install uv and Setup Python
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install Bounty Bot Dependencies
+        run: |
+          cd bounty_bot
+          uv sync
+
+      - name: Run Pytest Suite
+        run: |
+          cd bounty_bot
+          uv run pytest
+
+      - name: Run Bounty Bot Dry Run (if API key available)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          cd bounty_bot
+          uv run python -m src.main
+
+  # ---------------------------------------------------------------------------
+  # Cross-Platform Desktop Compilation Matrix
+  # ---------------------------------------------------------------------------
+  desktop-build-matrix:
+    name: Desktop App Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: traces-sm-desktop-linux
+          - os: windows-latest
+            artifact_name: traces-sm-desktop-windows.exe
+          - os: macos-latest
+            artifact_name: traces-sm-desktop-macos
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libx11-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libgtk-3-dev
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Desktop Application Binary
+        run: |
+          cd desktop
+          cargo build --release
+
+      - name: Upload Desktop Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            desktop/target/release/traces-sm-desktop
+            desktop/target/release/traces-sm-desktop.exe
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
+  # Continuous Fuzz Testing (cargo-fuzz / libFuzzer)
+  # Continuously fuzzes ASN.1 parsing, JSON-RPC endpoints, and Base64 decoders
+  # ---------------------------------------------------------------------------
+  cargo-fuzz-testing:
+    name: Continuous Fuzz Testing (libFuzzer)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev
+
+      - name: Setup Nightly Rust Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Cache Cargo & Fuzz Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@cargo-fuzz
+
+      - name: Fuzz ASN.1 / PKCS#8 Key Parsing
+        run: |
+          cargo +nightly fuzz run fuzz_asn1 -- -max_total_time=15 -max_len=4096
+
+      - name: Fuzz JSON-RPC & REST Deserialization
+        run: |
+          cargo +nightly fuzz run fuzz_json_rpc -- -max_total_time=15 -max_len=8192
+
+      - name: Fuzz Base64 & Base64URL Decoders
+        run: |
+          cargo +nightly fuzz run fuzz_base64 -- -max_total_time=15 -max_len=4096
+

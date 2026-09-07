@@ -1,0 +1,182 @@
+---
+layout: default
+title: "FIPS 140-3 Alignment vs Validation — traces-sm Security"
+description: "Read an honest breakdown of FIPS 140-3 alignment vs NIST CMVP validation, and why traces-sm follows FIPS guidelines without holding a formal certificate."
+url: "/fips-140-3/"
+---
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "headline": "FIPS 140-3 alignment, and why traces-sm is not FIPS validated",
+      "description": "Credibility analysis explaining the difference between FIPS 140-3 architectural alignment and NIST CMVP certificate validation in open-source security software.",
+      "url": "https://arjun-traces.github.io/traces-sm/fips-140-3/",
+      "datePublished": "2026-08-25",
+      "dateModified": "2026-08-25",
+      "author": {
+        "@type": "Organization",
+        "name": "arjun-traces"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is the difference between FIPS compliant and FIPS certified?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "FIPS compliant (or FIPS design aligned) means software implements FIPS algorithm specifications and memory zeroization patterns. FIPS certified (or CMVP validated) means the specific software binary and hardware boundary has received an official NIST CMVP certificate number. traces-sm follows FIPS 140-3 design patterns but holds no NIST CMVP certificate number and has not been independently audited."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<section class="max-w-7xl mx-auto px-6 py-12 space-y-10">
+    <div class="space-y-4">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono">
+            <span>NIST Standards &amp; CMVP Disclosure</span>
+        </div>
+        <h1 class="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
+            FIPS 140-3 alignment, and why traces-sm is not FIPS validated
+        </h1>
+        <p class="text-base md:text-lg text-gray-400 max-w-3xl leading-relaxed">
+            An open, transparent evaluation of cryptographic compliance terminology, implementation standards, and certification reality.
+        </p>
+    </div>
+
+    <!-- Verbatim Entity Definition -->
+    <div class="card p-6 bg-gray-900 border border-gray-800 text-sm text-gray-300 leading-relaxed font-sans">
+        <p>
+            <strong class="text-white">traces-sm</strong> is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.
+        </p>
+    </div>
+
+    <!-- Section 1: Crucial Terminology Distinction -->
+    <div class="space-y-6 text-sm text-gray-300 leading-relaxed">
+        <h2 class="text-2xl font-bold text-white">1. Understanding "FIPS Compliant" vs "NIST CMVP Validated"</h2>
+        <p>
+            In security engineering, software vendors frequently misuse terms like "FIPS compliant", "FIPS certified", or "validated". To maintain technical integrity, users must understand the exact regulatory boundary between software design alignment and government certification:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            <div class="card space-y-3">
+                <h3 class="text-base font-bold text-indigo-300 font-sans">FIPS 140-3 Design Aligned</h3>
+                <p class="text-xs text-gray-400 leading-relaxed font-sans">
+                    Software is engineered to conform to FIPS specifications in source code. This includes implementing FIPS-approved algorithms (AES-256-GCM, ECDSA P-256, HMAC-SHA256), following NIST SP 800-90A DRBG guidelines, and enforcing volatile memory zeroization on key drop. <strong class="text-white">traces-sm is FIPS design aligned</strong>.
+                </p>
+            </div>
+
+            <div class="card space-y-3 border-amber-500/30">
+                <h3 class="text-base font-bold text-yellow-400 font-sans">NIST CMVP Validated (Certified)</h3>
+                <p class="text-xs text-gray-400 leading-relaxed font-sans">
+                    A specific compiled software binary and physical hardware boundary has undergone formal testing by an accredited NVLAP laboratory and received an official certificate number from the NIST Cryptographic Module Validation Program (CMVP). <strong class="text-white">traces-sm holds NO NIST CMVP certificate</strong>.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Explicit Plain Disclosure -->
+    <div class="card p-6 bg-red-950/20 border border-red-500/30 text-sm space-y-3">
+        <h3 class="text-base font-bold text-red-400">Formal Compliance Disclaimer</h3>
+        <p class="text-gray-300 leading-relaxed">
+            <strong>traces-sm holds no NIST CMVP certificate number and has not been independently audited by a third-party security firm or NVLAP laboratory.</strong>
+        </p>
+        <p class="text-gray-400 text-xs leading-relaxed">
+            Statements in legacy documentation claiming "100% CONFORMANT" or "certified" are inaccurate. While traces-sm source code implements NIST algorithm specifications inside Intel SGX enclaves, it does not possess a CMVP validation certificate. Regulated enterprise environments requiring mandatory FIPS 140-2/140-3 certificate numbers for FedRAMP or FISMA compliance should evaluate this distinction carefully (<a href="{{ '/vs-hashicorp-vault/' | relative_url }}" class="text-indigo-400 underline">compare against HashiCorp Vault</a>).
+        </p>
+    </div>
+
+    <!-- Section 3: Implemented NIST Standards in Source Code -->
+    <div class="space-y-6">
+        <h2 class="text-2xl font-bold text-white">3. Source Code NIST Implementation Audit</h2>
+        <p class="text-sm text-gray-400">
+            Line-item mapping of NIST publications implemented within enclave/src/*.rs source files.
+        </p>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>NIST / FIPS STANDARD</th>
+                        <th>ENCLAVE SOURCE FILE</th>
+                        <th>IMPLEMENTATION DETAILS</th>
+                        <th>VERIFIED STATUS</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800 text-gray-300 font-mono text-xs">
+                    <tr>
+                        <td class="font-bold text-white">NIST SP 800-57 Part 1</td>
+                        <td>enclave/src/nist.rs</td>
+                        <td>4-phase key lifecycle state machine (PreOperational, Operational, Deactivated, Destroyed)</td>
+                        <td><span class="status-badge implemented">✓ Implemented</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-white">NIST SP 800-90A HMAC-DRBG</td>
+                        <td>enclave/src/drbg.rs</td>
+                        <td>HMAC-SHA256 deterministic random bit generator seeded via RDRAND/RDSEED</td>
+                        <td><span class="status-badge implemented">✓ Implemented</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-white">NIST SP 800-90B Health Tests</td>
+                        <td>enclave/src/drbg.rs</td>
+                        <td>Continuous Repetition Count Test (RCT) &amp; Adaptive Proportion Test (APT)</td>
+                        <td><span class="status-badge implemented">✓ Implemented</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-white">FIPS 197 &amp; SP 800-38D / 38F</td>
+                        <td>enclave/src/crypto.rs</td>
+                        <td>AES-128/256-GCM envelope encryption &amp; AES-KW key wrapping via ring crate</td>
+                        <td><span class="status-badge implemented">✓ Implemented</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-white">FIPS 140-3 Zeroization</td>
+                        <td>enclave/src/crypto.rs</td>
+                        <td>Volatile memory overwrites on key drop via zeroize::Zeroizing&lt;T&gt;</td>
+                        <td><span class="status-badge implemented">✓ Implemented</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-white">FIPS 203 / 204 / 205 (PQC)</td>
+                        <td>enclave/src/pqc.rs</td>
+                        <td>ML-KEM / ML-DSA API surfaces are currently stubs returning dummy vectors</td>
+                        <td><span class="status-badge not-implemented">⛔ Not implemented</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section 4: FIPS Zeroization Deep Dive -->
+    <div class="space-y-6 text-sm text-gray-300 leading-relaxed">
+        <h2 class="text-2xl font-bold text-white">4. FIPS 140-3 Key Zeroization Requirements</h2>
+        <p>
+            Section 7.9 of FIPS 140-3 specifies that a cryptographic module must provide zeroization mechanisms to overwrite all plaintext secret keys, intermediate key values, and critical security parameters (CSPs) before memory is returned to the system pool.
+        </p>
+        <p>
+            In <strong class="text-white">traces-sm</strong>, zeroization is enforced using Rust's type system and volatile memory barriers. Every sensitive key vector inside the enclave is wrapped in <code class="inline">zeroize::Zeroizing&lt;T&gt;</code>. Read our technical deep dive on <a href="{{ '/rust-zeroize-secrets/' | relative_url }}" class="text-indigo-400 underline">how traces-sm zeroizes secrets in Rust</a> to understand how volatile pointer writes prevent LLVM compiler dead-store elimination.
+        </p>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="space-y-6 pt-6">
+        <h2 class="text-2xl font-bold text-white">5. Frequently Asked Questions</h2>
+        <div class="card p-6 space-y-3">
+            <h3 class="text-base font-bold text-white font-sans">What is the difference between FIPS compliant and FIPS certified?</h3>
+            <p class="text-sm text-gray-400 leading-relaxed font-sans">
+                FIPS compliant (or FIPS design aligned) means software implements FIPS algorithm specifications and memory zeroization patterns. FIPS certified (or CMVP validated) means the specific software binary and hardware boundary has received an official NIST CMVP certificate number. <strong>traces-sm follows FIPS 140-3 design patterns but holds no NIST CMVP certificate number and has not been independently audited.</strong>
+            </p>
+        </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="border-t border-gray-800/80 pt-8 flex flex-wrap justify-between gap-4 text-xs font-sans">
+        <a href="{{ '/remote-attestation/' | relative_url }}" class="text-indigo-400 hover:underline">← Remote attestation and RA-TLS in traces-sm</a>
+        <a href="{{ '/post-quantum-status/' | relative_url }}" class="text-indigo-400 hover:underline">Post-quantum cryptography in traces-sm — current status →</a>
+    </div>
+</section>

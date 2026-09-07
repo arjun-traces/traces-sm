@@ -1,4 +1,5 @@
 use ring::hmac;
+use ring::rand::SecureRandom;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, Copy)]
@@ -40,11 +41,8 @@ impl HmacDrbg {
 
     fn get_entropy(len: usize) -> Vec<u8> {
         let mut buf = vec![0u8; len];
-        // In a real SGX environment, we would use rdrand/rdseed.
-        // For fallback/simulation, we use standard OS randomness or time.
-        for i in 0..len {
-            buf[i] = (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().subsec_nanos() % 256) as u8;
-        }
+        let rng = ring::rand::SystemRandom::new();
+        rng.fill(&mut buf).expect("Secure entropy generation failed");
         buf
     }
 

@@ -1,6 +1,6 @@
-﻿# Windows Build Script for traces-sm-desktop
+# Windows Build Script for traces-sm-desktop
 
-Write-Host "=== Building traces-sm Desktop App for Windows (x86_64-pc-windows-msvc) ===" -ForegroundColor Cipher
+Write-Host "=== Building traces-sm Desktop App for Windows (x86_64-pc-windows-msvc) ===" -ForegroundColor Cyan
 
 # 1. Check Rust installation
 $rustVersion = rustc --version

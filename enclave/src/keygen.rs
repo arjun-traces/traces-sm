@@ -1,4 +1,4 @@
-﻿//! Comprehensive Key Generation & Management Engine.
+//! Comprehensive Key Generation & Management Engine.
 //!
 //! Supports classic asymmetric (RSA-2048/4096, ECDSA P-256/P-384/P-521/Secp256k1, Ed25519, X25519),
 //! post-quantum (ML-KEM-512/768/1024, ML-DSA-3/5, SLH-DSA), symmetric key wrapping (AES-KW SP 800-38F),
@@ -32,11 +32,28 @@ pub fn generate_key_pair(
         KeyAlgorithm::EcdsaP384 => generate_ecdsa_p384(provider),
         KeyAlgorithm::Secp256k1 => generate_secp256k1(provider),
         KeyAlgorithm::Ed25519 => generate_ed25519(provider),
+        KeyAlgorithm::FrostEd25519 => generate_frost_ed25519(provider),
         KeyAlgorithm::MlKem768 | KeyAlgorithm::MlKem1024 => generate_pqc_kem(&algorithm.to_string(), provider),
         KeyAlgorithm::MlDsa3 | KeyAlgorithm::MlDsa5 => generate_pqc_dsa(&algorithm.to_string(), provider),
         KeyAlgorithm::Aes256Gcm | KeyAlgorithm::Aes256Kw => generate_symmetric(32, &algorithm.to_string(), provider),
         _ => generate_symmetric(32, &algorithm.to_string(), provider),
     }
+}
+
+fn generate_frost_ed25519(provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+    let output = crate::frost::generate_dealer_keys(3, 2)?;
+    let public_key_pem = format!(
+        "-----BEGIN FROST ED25519 PUBLIC KEY PACKAGE-----\n{}\n-----END FROST ED25519 PUBLIC KEY PACKAGE-----",
+        output.group_public_key_hex
+    );
+    let output_bytes = serde_json::to_vec(&output)
+        .map_err(|e| EnclaveError::KeyGenFailed(format!("FROST serialize error: {}", e)))?;
+    let sealed_private_key = seal_data(&output_bytes, "seal:frost-privkey", provider)?;
+
+    Ok(GeneratedKeyPair {
+        public_key_pem,
+        sealed_private_key,
+    })
 }
 
 fn generate_rsa(bits: usize, provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
@@ -120,18 +137,10 @@ fn generate_ecdsa_p384(provider: &dyn SealingKeyProvider) -> Result<GeneratedKey
     })
 }
 
-fn generate_secp256k1(provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
-    let mut priv_bytes = Zeroizing::new(vec![0u8; 32]);
-    ring::rand::SystemRandom::new().fill(&mut priv_bytes)
-        .map_err(|_| EnclaveError::KeyGenFailed("Secp256k1 rand failed".into()))?;
-
-    let public_key_pem = format!(
-        "-----BEGIN PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----",
-        hex::encode(&priv_bytes[0..16])
-    );
-    let sealed_private_key = seal_data(&priv_bytes, "seal:secp256k1-privkey", provider)?;
-
-    Ok(GeneratedKeyPair { public_key_pem, sealed_private_key })
+fn generate_secp256k1(_provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+    Err(EnclaveError::NotImplemented(
+        "Secp256k1 algorithm support is not implemented".into(),
+    ))
 }
 
 fn generate_ed25519(provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
@@ -153,28 +162,18 @@ fn generate_ed25519(provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPai
     Ok(GeneratedKeyPair { public_key_pem, sealed_private_key })
 }
 
-fn generate_pqc_kem(name: &str, provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
-    let mut pub_bytes = vec![0u8; 1184];
-    let mut priv_bytes = Zeroizing::new(vec![0u8; 2400]);
-    ring::rand::SystemRandom::new().fill(&mut pub_bytes).unwrap();
-    ring::rand::SystemRandom::new().fill(&mut priv_bytes).unwrap();
-
-    let public_key_pem = format!("-----BEGIN {} PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----", name, base64::engine::general_purpose::STANDARD.encode(&pub_bytes));
-    let sealed_private_key = seal_data(&priv_bytes, "seal:pqc-privkey", provider)?;
-
-    Ok(GeneratedKeyPair { public_key_pem, sealed_private_key })
+fn generate_pqc_kem(name: &str, _provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+    Err(EnclaveError::NotImplemented(format!(
+        "Post-Quantum Cryptography KEM ({}) is not implemented",
+        name
+    )))
 }
 
-fn generate_pqc_dsa(name: &str, provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
-    let mut pub_bytes = vec![0u8; 1952];
-    let mut priv_bytes = Zeroizing::new(vec![0u8; 4016]);
-    ring::rand::SystemRandom::new().fill(&mut pub_bytes).unwrap();
-    ring::rand::SystemRandom::new().fill(&mut priv_bytes).unwrap();
-
-    let public_key_pem = format!("-----BEGIN {} PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----", name, base64::engine::general_purpose::STANDARD.encode(&pub_bytes));
-    let sealed_private_key = seal_data(&priv_bytes, "seal:pqc-privkey", provider)?;
-
-    Ok(GeneratedKeyPair { public_key_pem, sealed_private_key })
+fn generate_pqc_dsa(name: &str, _provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+    Err(EnclaveError::NotImplemented(format!(
+        "Post-Quantum Cryptography DSA ({}) is not implemented",
+        name
+    )))
 }
 
 fn generate_symmetric(len: usize, name: &str, provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {

@@ -1,4 +1,4 @@
-﻿//! JWT token service — runs entirely inside the enclave.
+//! JWT token service — runs entirely inside the enclave.
 //!
 //! On first start, generates an Ed25519 signing keypair, seals the private
 //! key to disk, and uses it for all subsequent token issuance.  Token JWTs
@@ -11,6 +11,8 @@
 
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
+use ring::signature::KeyPair;
+
 
 use base64::Engine as _;
 use chrono::Utc;

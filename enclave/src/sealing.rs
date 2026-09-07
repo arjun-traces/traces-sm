@@ -1,4 +1,4 @@
-﻿//! SGX sealing abstraction.
+//! SGX sealing abstraction.
 //!
 //! Sealing = encrypt-then-store using a hardware-derived (or simulation) key.
 //!
@@ -144,8 +144,9 @@ fn derive_dek(
     // HKDF: Extract → expand
     let salt = hkdf::Salt::new(hkdf::HKDF_SHA256, b"traces-sm-enclave-v1");
     let prk = salt.extract(master.as_ref());
+    let info = [purpose.as_bytes()];
     let okm = prk
-        .expand(&[purpose.as_bytes()], &AES_256_GCM)
+        .expand(&info, &AES_256_GCM)
         .map_err(|_| EnclaveError::Hkdf(format!("expand failed for purpose={purpose}")))?;
 
     let mut dek = Zeroizing::new([0u8; 32]);
@@ -216,13 +217,17 @@ pub fn unseal(
     let decrypted = opening_key
         .open_in_place(Aad::empty(), &mut in_out)
         .map_err(|_| EnclaveError::AesGcmDecrypt)?;
-
     Ok(decrypted.to_vec())
 }
+
+pub use seal as seal_data;
+pub use unseal as unseal_data;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
+    use std::thread;
 
     struct MockProvider([u8; 32]);
     impl SealingKeyProvider for MockProvider {
@@ -247,5 +252,32 @@ mod tests {
         // Different purpose → different DEK → tag mismatch
         assert!(unseal(&blob, "purpose:B", &p).is_err());
     }
+
+    #[test]
+    fn test_high_concurrency_sealing() {
+        let provider = Arc::new(MockProvider([0x42; 32]));
+        let mut handles = Vec::new();
+
+        for thread_idx in 0..16 {
+            let p = Arc::clone(&provider);
+            let handle = thread::spawn(move || {
+                for iter in 0..50 {
+                    let secret = format!("concurrent-secret-{}-{}", thread_idx, iter);
+                    let purpose = format!("purpose-{}", thread_idx % 4);
+                    let sealed = seal(secret.as_bytes(), &purpose, p.as_ref())
+                        .expect("seal failed under concurrency");
+                    let unsealed = unseal(&sealed, &purpose, p.as_ref())
+                        .expect("unseal failed under concurrency");
+                    assert_eq!(unsealed, secret.as_bytes());
+                }
+            });
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.join().expect("thread panicked during concurrency test");
+        }
+    }
 }
+
 

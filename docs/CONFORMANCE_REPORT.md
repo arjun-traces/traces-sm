@@ -70,7 +70,7 @@ This report establishes formal verification that the **`traces-sm`** codebase, m
 - **PSD Requirement**: ML-KEM, ML-DSA, Shamir SSS, Pedersen VSS, Schnorr PoK, Bulletproofs, Paillier PHE.
 - **Verification Evidence**:
   - PQC: [`enclave/src/pqc.rs`](file:///c:/Users/admin/Downloads/Secrets-Manager/enclave/src/pqc.rs) (ML-KEM-768/1024, ML-DSA-3/5).
-  - DKG: [`enclave/src/dkg.rs`](file:///c:/Users/admin/Downloads/Secrets-Manager/enclave/src/dkg.rs) (Shamir SSS & Pedersen VSS).
+  - DKG: [`enclave/src/dkg.rs`](file:///c:/Users/admin/Downloads/Secrets-Manager/enclave/src/dkg.rs) (Key-level multi-byte secret splitting `split_secret_bytes()`, byte-level scope `split_secret()`, Shamir SSS & Pedersen VSS using NIST SP 800-90A HMAC_DRBG).
   - ZKP: [`enclave/src/zkp/schnorr.rs`](file:///c:/Users/admin/Downloads/Secrets-Manager/enclave/src/zkp/schnorr.rs) & [`bulletproof.rs`](file:///c:/Users/admin/Downloads/Secrets-Manager/enclave/src/zkp/bulletproof.rs).
   - PHE: [`enclave/src/he/paillier.rs`](file:///c:/Users/admin/Downloads/Secrets-Manager/enclave/src/he/paillier.rs).
 

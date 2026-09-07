@@ -36,24 +36,8 @@ impl Default for KeyUsage {
     }
 }
 
-pub struct Zeroizing<T> {
-    data: T,
-}
+use zeroize::Zeroizing;
 
-impl<T> Zeroizing<T> {
-    pub fn new(data: T) -> Self {
-        Self { data }
-    }
-    pub fn as_ref(&self) -> &T {
-        &self.data
-    }
-}
-
-impl<T> Drop for Zeroizing<T> {
-    fn drop(&mut self) {
-        // In a real implementation this would securely wipe the memory
-    }
-}
 
 pub fn sp800_108_kdf(ki: &[u8], label: &[u8], context: &[u8], l: usize) -> Zeroizing<Vec<u8>> {
     let key = hmac::Key::new(hmac::HMAC_SHA256, ki);

@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "traces-sm-enclave"
 version = "0.1.0"
 edition = "2021"
@@ -6,6 +6,10 @@ edition = "2021"
 [[bin]]
 name = "traces-sm-enclave"
 path = "src/main.rs"
+
+[lib]
+name = "traces_sm_enclave"
+path = "src/lib.rs"
 
 [dependencies]
 # ---------------------------------------------------------------------------
@@ -26,6 +30,7 @@ curve25519-dalek  = { version = "4", default-features = false, features = ["allo
 schnorrkel        = { version = "0.11", default-features = false, features = ["std", "preaudit_deprecated"] }
 bulletproofs      = { version = "4", default-features = false, features = ["std"] }
 merlin            = { version = "3", default-features = false, features = ["std"] }
+frost-ed25519     = "2.0.0"
 
 # ---------------------------------------------------------------------------
 # ZK-SNARKs (arkworks)
@@ -40,7 +45,7 @@ ark-ec        = { version = "0.4", default-features = false, features = ["std"] 
 # ---------------------------------------------------------------------------
 # Homomorphic Encryption (Paillier — big-integer arithmetic)
 # ---------------------------------------------------------------------------
-num-bigint    = { version = "0.4", features = ["rand"] }
+num-bigint    = { version = "0.4", features = ["rand", "serde"] }
 num-traits    = "0.2"
 num-integer   = "0.1"
 num-prime     = "0.4"        # Miller-Rabin primality for Paillier keygen
@@ -48,7 +53,7 @@ num-prime     = "0.4"        # Miller-Rabin primality for Paillier keygen
 # ---------------------------------------------------------------------------
 # TLS / HTTP
 # ---------------------------------------------------------------------------
-rustls        = { version = "0.23", features = ["ring"] }
+rustls        = { version = "0.23", default-features = false, features = ["ring", "std"] }
 rcgen         = "0.13"
 httparse      = "1"
 

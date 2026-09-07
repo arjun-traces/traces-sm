@@ -1,4 +1,4 @@
-﻿use eframe::egui;
+use eframe::egui;
 
 fn main() -> eframe::Result<()> {
     tracing_subscriber::fmt::init();
@@ -45,12 +45,12 @@ impl eframe::App for TracesSmApp {
         // Top Header Panel
         egui::TopBottomPanel::top("header_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("🔒 traces-sm").bold().size(16.0));
+                ui.label(egui::RichText::new("🔒 traces-sm").strong().size(16.0));
                 ui.label(egui::RichText::new("SGX Secrets & Key Management").size(12.0).color(egui::Color32::GRAY));
                 
                 ui.separator();
                 ui.label(egui::RichText::new("Ubuntu 24.04 (GTK3)").monospace().size(10.0));
-                ui.label(egui::RichText::new("SGX HW_ACTIVE").monospace().bold().color(egui::Color32::GREEN));
+                ui.label(egui::RichText::new("SGX HW_ACTIVE").monospace().strong().color(egui::Color32::GREEN));
                 ui.label(egui::RichText::new("RA-TLS VERIFIED").monospace().color(egui::Color32::LIGHT_BLUE));
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -72,22 +72,22 @@ impl eframe::App for TracesSmApp {
         // Left Sidebar Navigation
         egui::SidePanel::left("left_sidebar").resizable(false).default_width(200.0).show(ctx, |ui| {
             ui.add_space(8.0);
-            ui.label(egui::RichText::new("KEYS & SECRETS").bold().size(11.0).color(egui::Color32::GRAY));
+            ui.label(egui::RichText::new("KEYS & SECRETS").strong().size(11.0).color(egui::Color32::GRAY));
             ui.selectable_value(&mut self.active_tab, "dashboard".to_string(), "• Dashboard");
             ui.selectable_value(&mut self.active_tab, "lifecycle".to_string(), "• Key Lifecycle [8]");
             ui.selectable_value(&mut self.active_tab, "vault".to_string(), "• Vault [14]");
 
             ui.add_space(12.0);
-            ui.label(egui::RichText::new("NETWORK").bold().size(11.0).color(egui::Color32::GRAY));
+            ui.label(egui::RichText::new("NETWORK").strong().size(11.0).color(egui::Color32::GRAY));
             ui.selectable_value(&mut self.active_tab, "topology".to_string(), "• DKG Topology [3]");
 
             ui.add_space(12.0);
-            ui.label(egui::RichText::new("CRYPTOGRAPHY").bold().size(11.0).color(egui::Color32::GRAY));
+            ui.label(egui::RichText::new("CRYPTOGRAPHY").strong().size(11.0).color(egui::Color32::GRAY));
             ui.selectable_value(&mut self.active_tab, "entropy".to_string(), "• Entropy");
             ui.selectable_value(&mut self.active_tab, "zkp".to_string(), "• ZKP Sandbox");
 
             ui.add_space(12.0);
-            ui.label(egui::RichText::new("GOVERNANCE").bold().size(11.0).color(egui::Color32::GRAY));
+            ui.label(egui::RichText::new("GOVERNANCE").strong().size(11.0).color(egui::Color32::GRAY));
             ui.selectable_value(&mut self.active_tab, "policy".to_string(), "• Policy");
             ui.selectable_value(&mut self.active_tab, "audit".to_string(), "• Audit Logs");
         });

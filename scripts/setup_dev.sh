@@ -9,9 +9,10 @@ rustup target add x86_64-fortanix-unknown-sgx
 
 cargo install ftxsgx-elf2sgxs ftxsgx-runner
 
-echo "Installing Python deps..."
-pip install -r host/requirements.txt
-pip install -r cli/requirements.txt
+echo "Installing Python deps for bounty_bot..."
+if command -v uv &> /dev/null; then
+    cd bounty_bot && uv sync && cd ..
+fi
 
 echo "Generating self-signed certs for dev..."
 # openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out cert.pem

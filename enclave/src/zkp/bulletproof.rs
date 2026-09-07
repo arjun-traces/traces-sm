@@ -1,4 +1,4 @@
-﻿//! Bulletproof range proofs.
+//! Bulletproof range proofs.
 //!
 //! A range proof proves that a committed value `v` satisfies:
 //!
@@ -116,6 +116,19 @@ pub fn prove_range(
 /// Returns `true` iff the proof is valid — i.e. the committer knows a value
 /// in `[proof.min, proof.max]`.
 pub fn verify_range_proof(proof: &SerializedRangeProof) -> Result<bool, EnclaveError> {
+    if proof.max < proof.min {
+        return Err(EnclaveError::ZkpInvalidInput("max must be >= min".into()));
+    }
+    let range_span = proof
+        .max
+        .checked_sub(proof.min)
+        .ok_or_else(|| EnclaveError::ZkpInvalidInput("underflow in range span".into()))?;
+    if range_span >= (1u64 << RANGE_BITS) {
+        return Err(EnclaveError::ZkpInvalidInput(format!(
+            "range span exceeds 2^{RANGE_BITS}"
+        )));
+    }
+
     let proof_bytes = hex::decode(&proof.proof_hex)
         .map_err(|_| EnclaveError::ZkpInvalidInput("bad proof hex".into()))?;
 

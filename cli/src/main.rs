@@ -1,4 +1,4 @@
-﻿use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use colored::*;
 
 mod client;
@@ -106,12 +106,12 @@ enum SecretCommands {
 
 #[derive(Subcommand)]
 enum KeyCommands {
-    /// Generate a new keypair inside SGX EPC memory (RSA, ECDSA, Ed25519, ML-KEM, ML-DSA)
+    /// Generate a new keypair inside SGX EPC memory (RSA, ECDSA, Ed25519, ML-KEM, ML-DSA-3, ML-DSA-87)
     Generate {
         /// Key alias / identifier
         #[arg(short, long)]
         name: String,
-        /// Key algorithm (rsa-4096, rsa-2048, ecdsa-p256, ecdsa-p384, ed25519, ml-kem-768, ml-dsa-3, aes-256-kw)
+        /// Key algorithm (rsa-4096, rsa-2048, ecdsa-p256, ecdsa-p384, ed25519, ml-kem-768, ml-dsa-3, ml-dsa-87, aes-256-kw)
         #[arg(short, long, default_value = "rsa-4096")]
         algorithm: String,
     },
@@ -129,6 +129,18 @@ enum KeyCommands {
         /// Message text to sign
         #[arg(short, long)]
         message: String,
+    },
+    /// Verify a signature against a message and key alias
+    Verify {
+        /// Key alias / identifier
+        #[arg(short, long)]
+        name: String,
+        /// Message text that was signed
+        #[arg(short, long)]
+        message: String,
+        /// Hex-encoded signature string
+        #[arg(short, long)]
+        signature: String,
     },
 }
 
@@ -195,71 +207,76 @@ async fn main() -> anyhow::Result<()> {
                     "secret_type": secret_type,
                     "ttl": ttl
                 });
-                let res = client.post("/v1/secrets", &payload).await?;
+                let res: serde_json::Value = client.post("/v1/secrets", &payload).await?;
                 println!("{}", format!("✓ Secret '{}' sealed in SGX enclave: {}", name, res).green());
             }
             SecretCommands::Get { name } => {
-                let res = client.get(&format!("/v1/secrets?name={}", name)).await?;
+                let res: serde_json::Value = client.get(&format!("/v1/secrets?name={}", name)).await?;
                 println!("{}", format!("Secret Metadata for '{}': {}", name, res).cyan());
             }
             SecretCommands::List => {
-                let res = client.get("/v1/secrets").await?;
+                let res: serde_json::Value = client.get("/v1/secrets").await?;
                 println!("{}", format!("Sealed Secret Vault List: {}", res).cyan());
             }
         },
         Commands::Key { action } => match action {
             KeyCommands::Generate { name, algorithm } => {
                 let payload = serde_json::json!({ "name": name, "algorithm": algorithm });
-                let res = client.post("/v1/keys", &payload).await?;
+                let res: serde_json::Value = client.post("/v1/keys", &payload).await?;
                 println!("{}", format!("✓ Key '{}' ({}) generated inside SGX enclave: {}", name, algorithm, res).green());
             }
             KeyCommands::Public { name } => {
-                let res = client.get(&format!("/v1/keys?name={}", name)).await?;
+                let res: serde_json::Value = client.get(&format!("/v1/keys?name={}", name)).await?;
                 println!("{}", format!("Public Key PEM for '{}': {}", name, res).cyan());
             }
             KeyCommands::Sign { name, message } => {
                 let payload = serde_json::json!({ "name": name, "message": message });
-                let res = client.post("/v1/keys/sign", &payload).await?;
+                let res: serde_json::Value = client.post("/v1/keys/sign", &payload).await?;
                 println!("{}", format!("Signature Output: {}", res).yellow());
+            }
+            KeyCommands::Verify { name, message, signature } => {
+                let payload = serde_json::json!({ "name": name, "message": message, "signature": signature });
+                let res: serde_json::Value = client.post("/v1/keys/verify", &payload).await?;
+                println!("{}", format!("Signature Verification: {}", res).green());
             }
         },
         Commands::Lifecycle { action } => match action {
             LifecycleCommands::Transition { id, state } => {
-                let res = client.post("/v1/lifecycle/transition", &serde_json::json!({ "key_id": id, "target_state": state })).await?;
+                let res: serde_json::Value = client.post("/v1/lifecycle/transition", &serde_json::json!({ "key_id": id, "target_state": state })).await?;
                 println!("{}", format!("✓ Key {} transitioned to state {}: {}", id, state, res).green());
             }
             LifecycleCommands::Shred { id } => {
-                let res = client.post("/v1/lifecycle/shred", &serde_json::json!({ "key_id": id, "confirmation": id })).await?;
+                let res: serde_json::Value = client.post("/v1/lifecycle/shred", &serde_json::json!({ "key_id": id, "confirmation": id })).await?;
                 println!("{}", format!("✓ Key {} crypto-shredded (SP 800-88): {}", id, res).red());
             }
         },
         Commands::Dkg { action } => match action {
             DkgCommands::Nodes => {
-                let res = client.get("/v1/dkg/nodes").await?;
+                let res: serde_json::Value = client.get("/v1/dkg/nodes").await?;
                 println!("{}", format!("DKG Threshold Peer Nodes: {}", res).cyan());
             }
         },
         Commands::Entropy { action } => match action {
             EntropyCommands::Health => {
-                let res = client.get("/v1/entropy/health").await?;
+                let res: serde_json::Value = client.get("/v1/entropy/health").await?;
                 println!("{}", format!("NIST SP 800-90B DRBG Health (APT & RCT): {}", res).yellow());
             }
         },
         Commands::Zkp { action } => match action {
             ZkpCommands::Prove { token } => {
                 let payload = serde_json::json!({ "token": token });
-                let res = client.post("/v1/zkp/prove", &payload).await?;
+                let res: serde_json::Value = client.post("/v1/zkp/prove", &payload).await?;
                 println!("{}", format!("Schnorr Proof-of-Knowledge: {}", res).magenta());
             }
         },
         Commands::Attest { action } => match action {
             AttestCommands::Quote => {
-                let res = client.get("/v1/attest/quote").await?;
+                let res: serde_json::Value = client.get("/v1/attest/quote").await?;
                 println!("{}", format!("Intel DCAP Attestation Quote: {}", res).bold().blue());
             }
         },
         Commands::Health => {
-            let res = client.get("/health").await?;
+            let res: serde_json::Value = client.get("/health").await?;
             println!("{}", format!("System Status: {}", res).bold().green());
         }
     }

@@ -1,0 +1,195 @@
+---
+layout: default
+title: "Building an Intel SGX Enclave in Pure Rust — traces-sm Guide"
+description: "Learn how traces-sm builds Intel SGX enclaves in pure Rust using Fortanix EDP, managing Enclave Page Cache memory isolation and hardware trust boundaries."
+url: "/sgx-key-management/"
+---
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "headline": "Building an Intel SGX enclave in pure Rust with Fortanix EDP",
+      "description": "Comprehensive engineering guide detailing how traces-sm constructs pure Rust Intel SGX enclaves using Fortanix EDP and x86_64-fortanix-unknown-sgx.",
+      "url": "https://arjun-traces.github.io/traces-sm/sgx-key-management/",
+      "datePublished": "2026-08-25",
+      "dateModified": "2026-08-25",
+      "author": {
+        "@type": "Organization",
+        "name": "arjun-traces"
+      }
+    }
+  ]
+}
+</script>
+
+<section class="max-w-7xl mx-auto px-6 py-12 space-y-10">
+    <div class="space-y-4">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono">
+            <span>SGX Hardware Architecture &amp; Rust Toolchain</span>
+        </div>
+        <h1 class="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
+            Building an Intel SGX enclave in pure Rust with Fortanix EDP
+        </h1>
+        <p class="text-base md:text-lg text-gray-400 max-w-3xl leading-relaxed">
+            A technical guide to compiling, running, and managing key material inside Intel SGX Enclave Page Cache (EPC) memory using pure Rust.
+        </p>
+    </div>
+
+    <!-- Verbatim Entity Definition -->
+    <div class="card p-6 bg-gray-900 border border-gray-800 text-sm text-gray-300 leading-relaxed font-sans">
+        <p>
+            <strong class="text-white">traces-sm</strong> is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.
+        </p>
+    </div>
+
+    <!-- Section 1: Pure Rust SGX with Fortanix EDP -->
+    <div class="space-y-6 text-sm text-gray-300 leading-relaxed">
+        <h2 class="text-2xl font-bold text-white">1. Why Fortanix EDP (`x86_64-fortanix-unknown-sgx`)?</h2>
+        <p>
+            Traditionally, developing applications for Intel SGX required the official C/C++ Intel SGX SDK or wrapper toolchains like Teaclave / Baidu SGX SDK. These SDKs present several drawbacks for memory-safe key management: C-style memory bugs (buffer overflows, use-after-free) can break the security guarantees of the enclave itself, and interfacing Rust code with C SDKs requires extensive unsafe FFI bindings.
+        </p>
+        <p>
+            Fortanix EDP (Enclave Development Platform) integrates Intel SGX support directly into the official Rust compiler standard library as a Tier-2 target: <code class="inline">x86_64-fortanix-unknown-sgx</code>. This enables compiling pure Rust code into SGX enclave binaries without C toolchain dependencies or C-based runtime glue.
+        </p>
+        <p>
+            Inside <strong class="text-white">traces-sm</strong>, the enclave crate (<code class="inline">enclave/</code>) is built against Fortanix EDP. Memory allocations use standard Rust collections (<code class="inline">Vec</code>, <code class="inline">HashMap</code>), and panics abort execution immediately to prevent enclave state corruption.
+        </p>
+    </div>
+
+    <!-- Section 2: Cargo Target Configuration -->
+    <div class="space-y-6 text-sm text-gray-300 leading-relaxed">
+        <h2 class="text-2xl font-bold text-white">2. Cargo Configuration for Enclave Compilation</h2>
+        <p>
+            Building the enclave requires target setup in <code class="inline">.cargo/config.toml</code> and manifest declarations in <code class="inline">enclave/Cargo.toml</code>. Below is the configuration structure used in traces-sm:
+        </p>
+
+        <pre><code># enclave/Cargo.toml
+[package]
+name = "traces-sm-enclave"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "traces-sm-enclave"
+path = "src/main.rs"
+
+[dependencies]
+sgx-isa    = { version = "0.4", optional = true }  # Real EGETKEY HW execution
+ring       = "0.17"                                # AES-GCM & HKDF primitives
+rsa        = { version = "0.9", features = ["sha2", "pem"] }
+zeroize    = { version = "1", features = ["derive"] }
+
+[features]
+default = []
+sgx-hw  = ["sgx-isa"]
+
+[profile.release]
+opt-level = 3
+lto       = "thin"
+panic     = "abort"
+strip     = "debuginfo"</code></pre>
+    </div>
+
+    <!-- Section 3: Hardware Sealing via EGETKEY -->
+    <div class="space-y-6 text-sm text-gray-300 leading-relaxed">
+        <h2 class="text-2xl font-bold text-white">3. In-Enclave Key Sealing (`enclave/src/sealing.rs`)</h2>
+        <p>
+            When secrets must be written to disk, they cannot be stored in plaintext. Intel SGX provides the hardware instruction <code class="inline">EGETKEY</code>, which derives a hardware root key unique to the specific CPU and enclave measurement (<code class="inline">MRENCLAVE</code> or <code class="inline">MRSIGNER</code>).
+        </p>
+        <p>
+            In <code class="inline">enclave/src/sealing.rs</code>, traces-sm derives a Master Sealing Key using <code class="inline">EGETKEY</code>, expands it with HKDF-SHA256, and encrypts payloads with AES-256-GCM. Below is a simplified representation of the sealing flow:
+        </p>
+
+        <pre><code>// Data sealing architecture in enclave/src/sealing.rs
+pub fn seal(plaintext: &[u8], purpose: &str) -> Result&lt;Vec&lt;u8&gt;, EnclaveError&gt; {
+    // 1. Issue EGETKEY with KEYPOLICY_MRSIGNER to fetch 128-bit hardware key
+    let raw_hw_key = get_sgx_hardware_key(KEYPOLICY_MRSIGNER)?;
+
+    // 2. Expand raw key with HKDF-SHA256 and purpose label ("seal:secrets")
+    let master_key = hkdf_expand(&raw_hw_key, b"traces-sm-enclave-v1", purpose)?;
+
+    // 3. Encrypt payload with random 12-byte nonce & AES-256-GCM
+    let nonce = generate_random_nonce()?;
+    let ciphertext = aes_gcm_encrypt(&master_key, &nonce, plaintext)?;
+
+    // 4. Format sealed blob: [ Nonce (12B) || Ciphertext || Tag (16B) ]
+    Ok(format_sealed_blob(&nonce, &ciphertext))
+}</code></pre>
+        <p>
+            Because the sealing key is derived directly from CPU silicon registers via <code class="inline">EGETKEY</code>, sealed blobs written to disk cannot be decrypted on any other physical CPU or outside an enclave bearing the matching measurement.
+        </p>
+    </div>
+
+    <!-- Section 4: RAM Zeroization & Enclave Life Cycle -->
+    <div class="space-y-6 text-sm text-gray-300 leading-relaxed">
+        <h2 class="text-2xl font-bold text-white">4. Memory Isolation & Volatile Zeroization</h2>
+        <p>
+            Inside SGX Enclave Page Cache (EPC), memory pages are encrypted by hardware. However, when private keys are dropped, standard deallocators do not overwrite memory buffers. In high-assurance key management, memory registers must be sanitized immediately upon destruction.
+        </p>
+        <p>
+            All private key byte vectors inside traces-sm wrap in <code class="inline">zeroize::Zeroizing&lt;T&gt;</code>. Read our detailed guide on <a href="{{ '/rust-zeroize-secrets/' | relative_url }}" class="text-indigo-400 underline">how traces-sm zeroizes secrets in Rust</a> to understand how volatile writes and compiler memory fences prevent LLVM dead-store optimization risks.
+        </p>
+    </div>
+
+    <!-- Technical Status & Verification Table -->
+    <div class="space-y-6">
+        <h2 class="text-2xl font-bold text-white">5. Source Code Capability Matrix</h2>
+        <p class="text-sm text-gray-400">
+            Verified status of enclave modules based strictly on enclave/src/*.rs implementation code.
+        </p>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ENCLAVE MODULE</th>
+                        <th>FILE PATH</th>
+                        <th>IMPLEMENTATION STATUS</th>
+                        <th>TECHNICAL NOTES</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800 text-gray-300 font-mono text-xs">
+                    <tr>
+                        <td class="font-bold text-white">Hardware Sealing</td>
+                        <td>enclave/src/sealing.rs</td>
+                        <td><span class="status-badge implemented">✓ Implemented</span></td>
+                        <td>EGETKEY hardware binding + AES-256-GCM HKDF expansion</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-white">SP 800-90A HMAC-DRBG</td>
+                        <td>enclave/src/drbg.rs</td>
+                        <td><span class="status-badge implemented">✓ Implemented</span></td>
+                        <td>RDRAND/RDSEED entropy with SP 800-90B RCT/APT health tests</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-white">Zero-Knowledge Proofs</td>
+                        <td>enclave/src/zkp/</td>
+                        <td><span class="status-badge implemented">✓ Implemented</span></td>
+                        <td>Schnorr PoK (schnorrkel) &amp; Bulletproofs range proofs</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-white">Threshold Secret Sharing</td>
+                        <td>enclave/src/dkg.rs</td>
+                        <td><span class="status-badge implemented">✓ Implemented</span></td>
+                        <td>Key-level multi-byte SSS (`split_secret_bytes`) &amp; byte-level SSS with NIST SP 800-90A DRBG</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-white">Post-Quantum Crypto</td>
+                        <td>enclave/src/pqc.rs</td>
+                        <td><span class="status-badge not-implemented">⛔ Not implemented</span></td>
+                        <td>Functions return dummy zero vectors &amp; true unconditionally</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="border-t border-gray-800/80 pt-8 flex flex-wrap justify-between gap-4 text-xs font-sans">
+        <a href="{{ '/vs-hashicorp-vault/' | relative_url }}" class="text-indigo-400 hover:underline">← traces-sm vs HashiCorp Vault</a>
+        <a href="{{ '/rust-zeroize-secrets/' | relative_url }}" class="text-indigo-400 hover:underline">How traces-sm zeroizes secrets in Rust →</a>
+    </div>
+</section>

@@ -58,11 +58,16 @@ class BountyBotOrchestrator:
         # 4. Save Datasets
         self._save_datasets(deduped)
 
-        # 5. Generate and save README
+        # 5. Generate and save README in bounty_bot
         readme_content = ReadmeGenerator.generate_readme(deduped)
         readme_path = self.base_dir / "README.md"
         readme_path.write_text(readme_content, encoding="utf-8")
         logger.info(f"Updated README directory at {readme_path}")
+
+        # 6. Sync root README for full repository data visibility
+        root_readme_path = self.base_dir.parent / "README.md"
+        ReadmeGenerator.sync_root_readme(root_readme_path, deduped)
+        logger.info(f"Synced live bounty summary block to root README at {root_readme_path}")
 
         return deduped
 
