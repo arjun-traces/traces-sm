@@ -1,36 +1,12 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+---
+layout: default
+title: "traces-sm vs HashiCorp Vault — Hardware Isolation Comparison"
+description: "Compare traces-sm and HashiCorp Vault. Discover how enclave memory isolation differs from software-based secret management in untrusted host environments."
+nav_id: vs-vault
+keywords: "traces-sm, HashiCorp Vault, OpenBao, Intel SGX, enclave, secret management, HSM, comparison, memory isolation"
+---
 
-    <title>traces-sm vs HashiCorp Vault — Hardware Isolation Comparison</title>
-    <meta name="title" content="traces-sm vs HashiCorp Vault — Hardware Isolation Comparison">
-    <meta name="description" content="Compare traces-sm and HashiCorp Vault. Discover how enclave memory isolation differs from software-based secret management in untrusted host environments.">
-    <meta name="author" content="arjun-traces">
-
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://arjun-traces.github.io/traces-sm/vs-hashicorp-vault/">
-
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://arjun-traces.github.io/traces-sm/vs-hashicorp-vault/">
-    <meta property="og:title" content="traces-sm vs HashiCorp Vault — Hardware Isolation Comparison">
-    <meta property="og:description" content="Compare traces-sm and HashiCorp Vault. Discover how enclave memory isolation differs from software-based secret management in untrusted host environments.">
-    <meta property="og:image" content="https://arjun-traces.github.io/traces-sm/images/og-image.png">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://arjun-traces.github.io/traces-sm/vs-hashicorp-vault/">
-    <meta property="twitter:title" content="traces-sm vs HashiCorp Vault — Hardware Isolation Comparison">
-    <meta property="twitter:description" content="Compare traces-sm and HashiCorp Vault. Discover how enclave memory isolation differs from software-based secret management in untrusted host environments.">
-    <meta property="twitter:image" content="https://arjun-traces.github.io/traces-sm/images/og-image.png">
-
-    <!-- Compiled CSS stylesheet -->
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="/traces-sm/css/style.css">
-
-    <script type="application/ld+json">
+<script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@graph": [
@@ -62,44 +38,8 @@
       ]
     }
     </script>
-</head>
-<body class="min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
 
-    <!-- Top Navigation Header carrying all 7 pages -->
-    <header class="border-b border-gray-800/80 bg-gray-950/80 backdrop-blur sticky top-0 z-50 px-6 py-4">
-        <div class="max-w-7xl mx-auto flex items-center justify-between nav-container">
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-indigo-600/20 rounded-xl border border-indigo-500/30 text-indigo-400 font-mono text-sm font-bold">
-                    SGX
-                </div>
-                <a href="/traces-sm/" class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                    traces-sm
-                    <span class="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">v0.1.0</span>
-                </a>
-            </div>
-
-            <nav class="flex items-center space-x-6 text-xs md:text-sm font-medium nav-menu">
-                <a href="/traces-sm/" class="nav-link">Home</a>
-                <a href="/traces-sm/vs-hashicorp-vault/" class="nav-link active">vs Vault</a>
-                <a href="/traces-sm/sgx-key-management/" class="nav-link">SGX Enclave</a>
-                <a href="/traces-sm/rust-zeroize-secrets/" class="nav-link">Zeroize RAM</a>
-                <a href="/traces-sm/remote-attestation/" class="nav-link">RA-TLS</a>
-                <a href="/traces-sm/fips-140-3/" class="nav-link">FIPS 140-3</a>
-                <a href="/traces-sm/post-quantum-status/" class="nav-link">Post-Quantum</a>
-            </nav>
-
-            <div class="hidden md:flex items-center space-x-4">
-                <a href="https://github.com/arjun-traces/traces-sm" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-200 text-xs font-mono font-semibold flex items-center space-x-2 transition">
-                    <svg class="w-4 h-4 fill-current inline-block" viewBox="0 0 24 24" style="width: 1rem; height: 1rem;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    <span>GitHub</span>
-                </a>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Page Content -->
-    <main>
-        <section class="max-w-7xl mx-auto px-6 py-12 space-y-10">
+<section class="max-w-7xl mx-auto px-6 py-12 space-y-10">
             <div class="space-y-4">
                 <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono">
                     <span>Architectural Security Comparison</span>
@@ -129,7 +69,7 @@
                     If the underlying Linux kernel suffers a privilege escalation vulnerability (e.g., local root exploit), or if a cloud hypervisor is compromised by a malicious tenant or rogue operator, host memory can be dumped via memory acquisition tools (<code class="inline">/dev/mem</code>, DMA attacks, hypervisor memory introspection). In this scenario, software encryption at rest offers zero defense because the active operational keys are exposed in cleartext in host RAM.
                 </p>
                 <p>
-                    <strong class="text-white">traces-sm</strong> fundamentally shifts the trust boundary from software to hardware. By executing inside an Intel SGX Enclave Page Cache (EPC), memory pages are transparently encrypted at the CPU hardware level by the Intel Memory Encryption Engine (MEE). Even if the host operating system, hypervisor, or BIOS is fully compromised, kernel-level memory reads return only encrypted ciphertext bytes. Cryptographic operations are executed in hardware-isolated enclave memory, and keys are zeroized upon completion via <a href="/traces-sm/rust-zeroize-secrets/" class="text-indigo-400 underline">volatile memory overwrites in Rust</a>.
+                    <strong class="text-white">traces-sm</strong> fundamentally shifts the trust boundary from software to hardware. By executing inside an Intel SGX Enclave Page Cache (EPC), memory pages are transparently encrypted at the CPU hardware level by the Intel Memory Encryption Engine (MEE). Even if the host operating system, hypervisor, or BIOS is fully compromised, kernel-level memory reads return only encrypted ciphertext bytes. Cryptographic operations are executed in hardware-isolated enclave memory, and keys are zeroized upon completion via <a href="{{ '/rust-zeroize-secrets/' | relative_url }}" class="text-indigo-400 underline">volatile memory overwrites in Rust</a>.
                 </p>
             </div>
 
@@ -231,7 +171,7 @@
                     <div class="card space-y-3 border-red-500/30">
                         <h3 class="text-base font-bold text-red-400">No NIST CMVP Certificate</h3>
                         <p class="text-xs text-gray-400 leading-relaxed">
-                            HashiCorp Vault Enterprise holds formal NIST CMVP FIPS 140-2 / 140-3 validation certificates. <strong class="text-white">traces-sm holds no NIST CMVP certificate number</strong> and has not been evaluated by a NVLAP laboratory. Read our full disclaimers on <a href="/traces-sm/fips-140-3/" class="text-indigo-400 underline">FIPS 140-3 alignment vs validation</a>.
+                            HashiCorp Vault Enterprise holds formal NIST CMVP FIPS 140-2 / 140-3 validation certificates. <strong class="text-white">traces-sm holds no NIST CMVP certificate number</strong> and has not been evaluated by a NVLAP laboratory. Read our full disclaimers on <a href="{{ '/fips-140-3/' | relative_url }}" class="text-indigo-400 underline">FIPS 140-3 alignment vs validation</a>.
                         </p>
                     </div>
 
@@ -245,7 +185,7 @@
                     <div class="card space-y-3 border-red-500/30">
                         <h3 class="text-base font-bold text-red-400">Hardware CPU Dependency</h3>
                         <p class="text-xs text-gray-400 leading-relaxed">
-                            Vault runs on any commodity cloud VM, developer laptop, or ARM server. traces-sm strictly requires x86_64 processors with Intel SGX support (or simulation mode for testing). Learn more about enclave hardware execution in our <a href="/traces-sm/sgx-key-management/" class="text-indigo-400 underline">pure Rust SGX enclave guide</a>.
+                            Vault runs on any commodity cloud VM, developer laptop, or ARM server. traces-sm strictly requires x86_64 processors with Intel SGX support (or simulation mode for testing). Learn more about enclave hardware execution in our <a href="{{ '/sgx-key-management/' | relative_url }}" class="text-indigo-400 underline">pure Rust SGX enclave guide</a>.
                         </p>
                     </div>
 
@@ -271,36 +211,7 @@
 
             <!-- Internal Link Footer Navigation -->
             <div class="border-t border-gray-800/80 pt-8 flex flex-wrap justify-between gap-4 text-xs font-sans">
-                <a href="/traces-sm/sgx-key-management/" class="text-indigo-400 hover:underline">← Building an Intel SGX Enclave in Pure Rust</a>
-                <a href="/traces-sm/fips-140-3/" class="text-indigo-400 hover:underline">FIPS 140-3 Alignment Analysis →</a>
+                <a href="{{ '/sgx-key-management/' | relative_url }}" class="text-indigo-400 hover:underline">← Building an Intel SGX Enclave in Pure Rust</a>
+                <a href="{{ '/fips-140-3/' | relative_url }}" class="text-indigo-400 hover:underline">FIPS 140-3 Alignment Analysis →</a>
             </div>
         </section>
-    </main>
-
-    <!-- Shared Footer -->
-    <footer class="border-t border-gray-800/80 bg-gray-950 px-6 py-8 text-xs font-mono text-gray-500 text-center space-y-3">
-        <p class="text-gray-300 font-semibold">
-            traces-sm — Rust-native SGX secrets and key management framework
-        </p>
-        <p class="text-gray-400 max-w-3xl mx-auto font-sans leading-relaxed">
-            traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.
-        </p>
-
-        <!-- Internal Links in Footer for Crawlers -->
-        <div class="flex flex-wrap justify-center gap-4 py-2 text-indigo-400 font-sans">
-            <a href="/traces-sm/" class="hover:underline">Home</a>
-            <a href="/traces-sm/vs-hashicorp-vault/" class="hover:underline">vs HashiCorp Vault</a>
-            <a href="/traces-sm/sgx-key-management/" class="hover:underline">SGX Key Management</a>
-            <a href="/traces-sm/rust-zeroize-secrets/" class="hover:underline">Rust Secret Zeroization</a>
-            <a href="/traces-sm/remote-attestation/" class="hover:underline">Remote Attestation &amp; RA-TLS</a>
-            <a href="/traces-sm/fips-140-3/" class="hover:underline">FIPS 140-3 Alignment</a>
-            <a href="/traces-sm/post-quantum-status/" class="hover:underline">Post-Quantum Status</a>
-        </div>
-
-        <p class="text-gray-500">
-            Target: <code class="text-gray-400">x86_64-fortanix-unknown-sgx</code> | License: <a href="https://github.com/arjun-traces/traces-sm/blob/main/LICENSE" target="_blank" class="text-gray-400 hover:text-white underline">Apache-2.0</a> | Last updated: <span class="text-gray-300">25 August 2026</span>
-        </p>
-    </footer>
-
-</body>
-</html>

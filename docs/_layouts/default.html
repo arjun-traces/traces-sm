@@ -4,30 +4,90 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{{ page.title | default: "traces-sm — Rust-native SGX secrets and key management framework" }}</title>
-    <meta name="title" content="{{ page.title | default: 'traces-sm — Rust-native SGX secrets and key management framework' }}">
-    <meta name="description" content="{{ page.description | default: 'traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.' }}">
+    <title>{{ page.title | default: site.title }}</title>
+    <meta name="title" content="{{ page.title | default: site.title }}">
+    <meta name="description" content="{{ page.description | default: site.description }}">
+    <meta name="keywords" content="{{ page.keywords | default: 'traces-sm, intel sgx, fortanix edp, rust secrets manager, key management, confidential computing, enclave, fips 140-3, ra-tls, zeroize' }}">
     <meta name="author" content="arjun-traces">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 
     <!-- Canonical URL -->
-    <link rel="canonical" href="https://arjun-traces.github.io/traces-sm{{ page.url }}">
+    <link rel="canonical" href="https://arjun-traces.github.io/traces-sm{{ page.url | replace: 'index.html', '' }}">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://arjun-traces.github.io/traces-sm{{ page.url }}">
-    <meta property="og:title" content="traces-sm — Rust-native SGX secrets and key management framework">
-    <meta property="og:description" content="{{ page.description | default: 'traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.' }}">
+    <meta property="og:site_name" content="traces-sm">
+    <meta property="og:url" content="https://arjun-traces.github.io/traces-sm{{ page.url | replace: 'index.html', '' }}">
+    <meta property="og:title" content="{{ page.title | default: site.title }}">
+    <meta property="og:description" content="{{ page.description | default: site.description }}">
     <meta property="og:image" content="https://arjun-traces.github.io/traces-sm/images/og-image.png">
+    <meta property="og:image:alt" content="traces-sm SGX Enclave Architecture &amp; Secrets Management">
+    <meta property="og:locale" content="en_US">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://arjun-traces.github.io/traces-sm{{ page.url }}">
-    <meta property="twitter:title" content="traces-sm — Rust-native SGX secrets and key management framework">
-    <meta property="twitter:description" content="{{ page.description | default: 'traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.' }}">
+    <meta property="twitter:site" content="@arjun_traces">
+    <meta property="twitter:creator" content="@arjun_traces">
+    <meta property="twitter:url" content="https://arjun-traces.github.io/traces-sm{{ page.url | replace: 'index.html', '' }}">
+    <meta property="twitter:title" content="{{ page.title | default: site.title }}">
+    <meta property="twitter:description" content="{{ page.description | default: site.description }}">
     <meta property="twitter:image" content="https://arjun-traces.github.io/traces-sm/images/og-image.png">
 
     <!-- Compiled CSS stylesheet -->
     <link rel="stylesheet" href="{{ '/css/style.css' | relative_url }}">
+
+    <!-- Global Organization & WebSite JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://arjun-traces.github.io/traces-sm/#organization",
+          "name": "arjun-traces",
+          "url": "https://arjun-traces.github.io/traces-sm/",
+          "logo": "https://arjun-traces.github.io/traces-sm/images/og-image.png",
+          "sameAs": [
+            "https://github.com/arjun-traces/traces-sm"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://arjun-traces.github.io/traces-sm/#website",
+          "url": "https://arjun-traces.github.io/traces-sm/",
+          "name": "traces-sm",
+          "description": "{{ site.description }}",
+          "publisher": {
+            "@id": "https://arjun-traces.github.io/traces-sm/#organization"
+          }
+        }
+      ]
+    }
+    </script>
+
+    {% if page.url != '/' and page.url != '/index.html' %}
+    <!-- BreadcrumbList JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://arjun-traces.github.io/traces-sm/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "{{ page.title }}",
+          "item": "https://arjun-traces.github.io/traces-sm{{ page.url | replace: 'index.html', '' }}"
+        }
+      ]
+    }
+    </script>
+    {% endif %}
 
     {% if page.json_ld %}
     <!-- Page Specific JSON-LD -->
@@ -50,13 +110,13 @@
             </div>
 
             <nav class="flex items-center space-x-6 text-xs md:text-sm font-medium nav-menu">
-                <a href="{{ '/' | relative_url }}" class="nav-link {% if page.url == '/' or page.url == '/index.html' %}active{% endif %}">Home</a>
-                <a href="{{ '/vs-hashicorp-vault/' | relative_url }}" class="nav-link {% if page.url contains 'vs-hashicorp-vault' %}active{% endif %}">vs Vault</a>
-                <a href="{{ '/sgx-key-management/' | relative_url }}" class="nav-link {% if page.url contains 'sgx-key-management' %}active{% endif %}">SGX Enclave</a>
-                <a href="{{ '/rust-zeroize-secrets/' | relative_url }}" class="nav-link {% if page.url contains 'rust-zeroize-secrets' %}active{% endif %}">Zeroize RAM</a>
-                <a href="{{ '/remote-attestation/' | relative_url }}" class="nav-link {% if page.url contains 'remote-attestation' %}active{% endif %}">RA-TLS</a>
-                <a href="{{ '/fips-140-3/' | relative_url }}" class="nav-link {% if page.url contains 'fips-140-3' %}active{% endif %}">FIPS 140-3</a>
-                <a href="{{ '/post-quantum-status/' | relative_url }}" class="nav-link {% if page.url contains 'post-quantum-status' %}active{% endif %}">Post-Quantum</a>
+                <a href="{{ '/' | relative_url }}" class="nav-link {% if page.url == '/' or page.url == '/index.html' or page.nav_id == 'home' %}active{% endif %}">Home</a>
+                <a href="{{ '/vs-hashicorp-vault/' | relative_url }}" class="nav-link {% if page.url contains 'vs-hashicorp-vault' or page.nav_id == 'vs-vault' %}active{% endif %}">vs Vault</a>
+                <a href="{{ '/sgx-key-management/' | relative_url }}" class="nav-link {% if page.url contains 'sgx-key-management' or page.nav_id == 'sgx-enclave' %}active{% endif %}">SGX Enclave</a>
+                <a href="{{ '/rust-zeroize-secrets/' | relative_url }}" class="nav-link {% if page.url contains 'rust-zeroize-secrets' or page.nav_id == 'zeroize-ram' %}active{% endif %}">Zeroize RAM</a>
+                <a href="{{ '/remote-attestation/' | relative_url }}" class="nav-link {% if page.url contains 'remote-attestation' or page.nav_id == 'remote-attestation' %}active{% endif %}">RA-TLS</a>
+                <a href="{{ '/fips-140-3/' | relative_url }}" class="nav-link {% if page.url contains 'fips-140-3' or page.nav_id == 'fips-140-3' %}active{% endif %}">FIPS 140-3</a>
+                <a href="{{ '/post-quantum-status/' | relative_url }}" class="nav-link {% if page.url contains 'post-quantum-status' or page.nav_id == 'post-quantum' %}active{% endif %}">Post-Quantum</a>
             </nav>
 
             <div class="hidden md:flex items-center space-x-4">
@@ -88,15 +148,16 @@
             <a href="{{ '/vs-hashicorp-vault/' | relative_url }}" class="hover:underline">vs HashiCorp Vault</a>
             <a href="{{ '/sgx-key-management/' | relative_url }}" class="hover:underline">SGX Key Management</a>
             <a href="{{ '/rust-zeroize-secrets/' | relative_url }}" class="hover:underline">Rust Secret Zeroization</a>
-            <a href="{{ '/remote-attestation/' | relative_url }}" class="hover:underline">Remote Attestation & RA-TLS</a>
+            <a href="{{ '/remote-attestation/' | relative_url }}" class="hover:underline">Remote Attestation &amp; RA-TLS</a>
             <a href="{{ '/fips-140-3/' | relative_url }}" class="hover:underline">FIPS 140-3 Alignment</a>
             <a href="{{ '/post-quantum-status/' | relative_url }}" class="hover:underline">Post-Quantum Status</a>
         </div>
 
         <p class="text-gray-500">
-            Target: <code class="text-gray-400">x86_64-fortanix-unknown-sgx</code> | License: <a href="https://github.com/arjun-traces/traces-sm/blob/main/LICENSE" target="_blank" class="text-gray-400 hover:text-white underline">Apache-2.0</a> | Last updated: <span class="text-gray-300">25 August 2026</span>
+            Target: <code class="text-gray-400">x86_64-fortanix-unknown-sgx</code> | License: <a href="https://github.com/arjun-traces/traces-sm/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white underline">Apache-2.0</a> | Last updated: <span class="text-gray-300">25 August 2026</span>
         </p>
     </footer>
 
 </body>
 </html>
+

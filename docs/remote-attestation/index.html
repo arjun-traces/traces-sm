@@ -1,36 +1,12 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+---
+layout: default
+title: "Remote Attestation & RA-TLS in Intel SGX — traces-sm Specs"
+description: "Understand Remote Attestation and RA-TLS in traces-sm, embedding Intel DCAP attestation quotes in X.509 certificates to verify enclave measurement hashes."
+nav_id: remote-attestation
+keywords: "Intel SGX, Remote Attestation, RA-TLS, DCAP, MRENCLAVE, MRSIGNER, PCCS, X.509, mTLS"
+---
 
-    <title>Remote Attestation &amp; RA-TLS in Intel SGX — traces-sm Specs</title>
-    <meta name="title" content="Remote Attestation &amp; RA-TLS in Intel SGX — traces-sm Specs">
-    <meta name="description" content="Understand Remote Attestation and RA-TLS in traces-sm, embedding Intel DCAP attestation quotes in X.509 certificates to verify enclave measurement hashes.">
-    <meta name="author" content="arjun-traces">
-
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://arjun-traces.github.io/traces-sm/remote-attestation/">
-
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://arjun-traces.github.io/traces-sm/remote-attestation/">
-    <meta property="og:title" content="Remote Attestation &amp; RA-TLS in Intel SGX — traces-sm Specs">
-    <meta property="og:description" content="Understand Remote Attestation and RA-TLS in traces-sm, embedding Intel DCAP attestation quotes in X.509 certificates to verify enclave measurement hashes.">
-    <meta property="og:image" content="https://arjun-traces.github.io/traces-sm/images/og-image.png">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://arjun-traces.github.io/traces-sm/remote-attestation/">
-    <meta property="twitter:title" content="Remote Attestation &amp; RA-TLS in Intel SGX — traces-sm Specs">
-    <meta property="twitter:description" content="Understand Remote Attestation and RA-TLS in traces-sm, embedding Intel DCAP attestation quotes in X.509 certificates to verify enclave measurement hashes.">
-    <meta property="twitter:image" content="https://arjun-traces.github.io/traces-sm/images/og-image.png">
-
-    <!-- Compiled CSS stylesheet -->
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="/traces-sm/css/style.css">
-
-    <script type="application/ld+json">
+<script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@graph": [
@@ -62,44 +38,8 @@
       ]
     }
     </script>
-</head>
-<body class="min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
 
-    <!-- Top Navigation Header carrying all 7 pages -->
-    <header class="border-b border-gray-800/80 bg-gray-950/80 backdrop-blur sticky top-0 z-50 px-6 py-4">
-        <div class="max-w-7xl mx-auto flex items-center justify-between nav-container">
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-indigo-600/20 rounded-xl border border-indigo-500/30 text-indigo-400 font-mono text-sm font-bold">
-                    SGX
-                </div>
-                <a href="/traces-sm/" class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                    traces-sm
-                    <span class="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">v0.1.0</span>
-                </a>
-            </div>
-
-            <nav class="flex items-center space-x-6 text-xs md:text-sm font-medium nav-menu">
-                <a href="/traces-sm/" class="nav-link">Home</a>
-                <a href="/traces-sm/vs-hashicorp-vault/" class="nav-link">vs Vault</a>
-                <a href="/traces-sm/sgx-key-management/" class="nav-link">SGX Enclave</a>
-                <a href="/traces-sm/rust-zeroize-secrets/" class="nav-link">Zeroize RAM</a>
-                <a href="/traces-sm/remote-attestation/" class="nav-link active">RA-TLS</a>
-                <a href="/traces-sm/fips-140-3/" class="nav-link">FIPS 140-3</a>
-                <a href="/traces-sm/post-quantum-status/" class="nav-link">Post-Quantum</a>
-            </nav>
-
-            <div class="hidden md:flex items-center space-x-4">
-                <a href="https://github.com/arjun-traces/traces-sm" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-200 text-xs font-mono font-semibold flex items-center space-x-2 transition">
-                    <svg class="w-4 h-4 fill-current inline-block" viewBox="0 0 24 24" style="width: 1rem; height: 1rem;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    <span>GitHub</span>
-                </a>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Page Content -->
-    <main>
-        <section class="max-w-7xl mx-auto px-6 py-12 space-y-10">
+<section class="max-w-7xl mx-auto px-6 py-12 space-y-10">
             <div class="space-y-4">
                 <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono">
                     <span>Intel DCAP Attestation &amp; Network Trust Architecture</span>
@@ -212,12 +152,12 @@
             <div class="space-y-6 text-sm text-gray-300 leading-relaxed">
                 <h2 class="text-2xl font-bold text-white">4. Why RA-TLS Outperforms Host Authentication</h2>
                 <p>
-                    Unlike traditional secret management architectures where API proxies authenticate using domain certificates issued to host servers (<a href="/traces-sm/vs-hashicorp-vault/" class="text-indigo-400 underline">compare with HashiCorp Vault</a>), RA-TLS ensures that:
+                    Unlike traditional secret management architectures where API proxies authenticate using domain certificates issued to host servers (<a href="{{ '/vs-hashicorp-vault/' | relative_url }}" class="text-indigo-400 underline">compare with HashiCorp Vault</a>), RA-TLS ensures that:
                 </p>
                 <ol class="list-decimal pl-6 space-y-2 text-gray-400">
                     <li>Clients know they are communicating with genuine Intel SGX hardware.</li>
                     <li>Clients verify that the enclave code matches the exact open-source build (<code class="inline">MRENCLAVE</code>).</li>
-                    <li>Plaintext secret payloads transmitted over mTLS are decrypted exclusively inside hardware-protected Enclave Page Cache memory (<a href="/traces-sm/sgx-key-management/" class="text-indigo-400 underline">read our pure Rust SGX enclave guide</a>).</li>
+                    <li>Plaintext secret payloads transmitted over mTLS are decrypted exclusively inside hardware-protected Enclave Page Cache memory (<a href="{{ '/sgx-key-management/' | relative_url }}" class="text-indigo-400 underline">read our pure Rust SGX enclave guide</a>).</li>
                 </ol>
             </div>
 
@@ -234,36 +174,7 @@
 
             <!-- Navigation Links -->
             <div class="border-t border-gray-800/80 pt-8 flex flex-wrap justify-between gap-4 text-xs font-sans">
-                <a href="/traces-sm/rust-zeroize-secrets/" class="text-indigo-400 hover:underline">← How traces-sm zeroizes secrets in Rust</a>
-                <a href="/traces-sm/fips-140-3/" class="text-indigo-400 hover:underline">FIPS 140-3 alignment, and why traces-sm is not FIPS validated →</a>
+                <a href="{{ '/rust-zeroize-secrets/' | relative_url }}" class="text-indigo-400 hover:underline">← How traces-sm zeroizes secrets in Rust</a>
+                <a href="{{ '/fips-140-3/' | relative_url }}" class="text-indigo-400 hover:underline">FIPS 140-3 alignment, and why traces-sm is not FIPS validated →</a>
             </div>
         </section>
-    </main>
-
-    <!-- Shared Footer -->
-    <footer class="border-t border-gray-800/80 bg-gray-950 px-6 py-8 text-xs font-mono text-gray-500 text-center space-y-3">
-        <p class="text-gray-300 font-semibold">
-            traces-sm — Rust-native SGX secrets and key management framework
-        </p>
-        <p class="text-gray-400 max-w-3xl mx-auto font-sans leading-relaxed">
-            traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP.
-        </p>
-
-        <!-- Internal Links in Footer for Crawlers -->
-        <div class="flex flex-wrap justify-center gap-4 py-2 text-indigo-400 font-sans">
-            <a href="/traces-sm/" class="hover:underline">Home</a>
-            <a href="/traces-sm/vs-hashicorp-vault/" class="hover:underline">vs HashiCorp Vault</a>
-            <a href="/traces-sm/sgx-key-management/" class="hover:underline">SGX Key Management</a>
-            <a href="/traces-sm/rust-zeroize-secrets/" class="hover:underline">Rust Secret Zeroization</a>
-            <a href="/traces-sm/remote-attestation/" class="hover:underline">Remote Attestation &amp; RA-TLS</a>
-            <a href="/traces-sm/fips-140-3/" class="hover:underline">FIPS 140-3 Alignment</a>
-            <a href="/traces-sm/post-quantum-status/" class="hover:underline">Post-Quantum Status</a>
-        </div>
-
-        <p class="text-gray-500">
-            Target: <code class="text-gray-400">x86_64-fortanix-unknown-sgx</code> | License: <a href="https://github.com/arjun-traces/traces-sm/blob/main/LICENSE" target="_blank" class="text-gray-400 hover:text-white underline">Apache-2.0</a> | Last updated: <span class="text-gray-300">25 August 2026</span>
-        </p>
-    </footer>
-
-</body>
-</html>

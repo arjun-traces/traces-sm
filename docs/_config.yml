@@ -1,11 +1,45 @@
-title: "traces-sm"
-description: "traces-sm is an open-source key and secret management framework that runs its cryptographic operations inside an Intel SGX enclave, written entirely in Rust on Fortanix EDP."
+title: "traces-sm — Rust-native SGX Secrets & Key Management Framework"
+description: "traces-sm is an open-source key and secret management framework running inside Intel SGX enclaves using pure Rust on Fortanix EDP. Hardware isolation, zeroize memory safety, RA-TLS, and NIST SP 800-57 alignment."
 url: "https://arjun-traces.github.io"
 baseurl: "/traces-sm"
+
+author:
+  name: "arjun-traces"
+  github: "arjun-traces"
+  twitter: "@arjun_traces"
 
 plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
 
 markdown: kramdown
-theme: null
+highlighter: rouge
+permalink: /:path/
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - prompts/
+  - ARCHITECTURE.md
+  - ARCHITECTURE_WALKTHROUGH.md
+  - ATTESTATION.md
+  - BENCHMARKS.md
+  - CLI.md
+  - COMPARISON.md
+  - CONFORMANCE_REPORT.md
+  - CONFORMANCE_SUMMARY_PUBLISHED.md
+  - FAQ.md
+  - GITHUB_TASKS.md
+  - KNOWLEDGE_BANK.md
+  - PAGE_BY_PAGE_DESIGN.md
+  - PRODUCT_SPECIFICATION.md
+  - README.md
+  - SPECIFICATION.md
+  - STANDARDS_MAPPING.md
+  - STATUS.md
+  - TASK_CHECKLIST.md
+  - TECHNICAL_SPECIFICATION.md
+  - TEST_PLAN_AND_CONFORMANCE.md
+  - WINDOWS_BUILD_GUIDE.md
+  - Designs.pdf
+
