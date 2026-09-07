@@ -59,7 +59,7 @@ impl eframe::App for TracesSmApp {
                         .size(10.0),
                 );
                 ui.label(
-                    egui::RichText::new("SGX HW_ACTIVE")
+                    egui::RichText::new(format!("SGX {}", self.sgx_mode))
                         .monospace()
                         .strong()
                         .color(egui::Color32::GREEN),
