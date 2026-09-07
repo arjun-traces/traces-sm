@@ -28,7 +28,7 @@ pub struct SecretShare {
 /// evaluating Shamir's Secret Sharing over GF(256) for each byte of the secret payload.
 /// Random coefficients are generated using NIST SP 800-90A HMAC_DRBG (`drbg.rs`).
 pub fn split_secret_bytes(secret: &[u8], threshold: usize, total: usize) -> Vec<KeyShare> {
-    if secret.is_empty() || threshold == 0 || total < threshold {
+    if secret.is_empty() || threshold == 0 || total < threshold || total > 255 {
         return Vec::new();
     }
 
@@ -70,14 +70,36 @@ pub fn split_secret_bytes(secret: &[u8], threshold: usize, total: usize) -> Vec<
 /// Reconstructs a multi-byte secret key (`Vec<u8>`) from `threshold` or more `KeyShare` instances
 /// using Lagrange polynomial interpolation over GF(256).
 pub fn reconstruct_secret_bytes(shares: &[KeyShare], threshold: usize) -> Result<Vec<u8>, String> {
+    if threshold == 0 {
+        return Err("Threshold cannot be zero".to_string());
+    }
     if shares.len() < threshold {
         return Err("Not enough shares to satisfy threshold".to_string());
     }
+
+    // Check for duplicate x coordinates and x == 0
+    let mut seen_x = std::collections::HashSet::new();
+    for s in &shares[0..threshold] {
+        if s.x == 0 {
+            return Err("Share with x=0 is invalid".to_string());
+        }
+        if !seen_x.insert(s.x) {
+            return Err("Duplicate x-coordinates in shares".to_string());
+        }
+    }
+
     if shares.is_empty() || shares[0].y.is_empty() {
         return Ok(Vec::new());
     }
 
     let secret_len = shares[0].y.len();
+    // Validate that all threshold shares have identical length (no ragged shares)
+    for s in &shares[0..threshold] {
+        if s.y.len() != secret_len {
+            return Err("Ragged share lengths".to_string());
+        }
+    }
+
     let mut secret = Vec::with_capacity(secret_len);
 
     for b in 0..secret_len {
@@ -117,6 +139,52 @@ pub fn split_secret(secret: u8, threshold: usize, total: usize) -> Vec<SecretSha
 
 /// Backward-compatible single-byte secret reconstruction function.
 pub fn reconstruct_secret(shares: &[SecretShare], threshold: usize) -> u8 {
+    if shares.len() < threshold || threshold == 0 {
+        return 0;
+    }
+
+    // If VSS scalar shares are present, interpolate over the Scalar field
+    if shares
+        .iter()
+        .take(threshold)
+        .all(|s| s.scalar_y_hex.is_some())
+    {
+        let mut secret_scalar = Scalar::ZERO;
+        let mut xs = Vec::with_capacity(threshold);
+        let mut ys = Vec::with_capacity(threshold);
+
+        for s in &shares[0..threshold] {
+            let x = Scalar::from(s.x as u64);
+            let hex_s = s.scalar_y_hex.as_ref().unwrap();
+            let bytes = match hex::decode(hex_s) {
+                Ok(b) => b,
+                Err(_) => return 0,
+            };
+            let arr: [u8; 32] = match bytes.try_into() {
+                Ok(a) => a,
+                Err(_) => return 0,
+            };
+            let y = Option::from(Scalar::from_canonical_bytes(arr))
+                .unwrap_or_else(|| Scalar::from_bytes_mod_order(arr));
+            xs.push(x);
+            ys.push(y);
+        }
+
+        for i in 0..threshold {
+            let mut num = Scalar::ONE;
+            let mut den = Scalar::ONE;
+            for j in 0..threshold {
+                if i != j {
+                    num *= xs[j];
+                    den *= xs[j] - xs[i];
+                }
+            }
+            let basis = num * den.invert();
+            secret_scalar += ys[i] * basis;
+        }
+        return secret_scalar.to_bytes()[0];
+    }
+
     let key_shares: Vec<KeyShare> = shares
         .iter()
         .map(|s| KeyShare {
