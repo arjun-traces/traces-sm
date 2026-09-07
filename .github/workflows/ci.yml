@@ -184,13 +184,13 @@ jobs:
           tool: cargo-fuzz
 
       - name: Fuzz ASN.1 / PKCS#8 Key Parsing
-        run: cargo +nightly fuzz run --fuzz-dir fuzz fuzz_asn1 -- -max_total_time=15 -max_len=4096
+        run: cargo +nightly fuzz run fuzz_asn1 -- -max_total_time=15 -max_len=4096
 
       - name: Fuzz JSON-RPC & REST Deserialization
-        run: cargo +nightly fuzz run --fuzz-dir fuzz fuzz_json_rpc -- -max_total_time=15 -max_len=8192
+        run: cargo +nightly fuzz run fuzz_json_rpc -- -max_total_time=15 -max_len=8192
 
       - name: Fuzz Base64 & Base64URL Decoders
-        run: cargo +nightly fuzz run --fuzz-dir fuzz fuzz_base64 -- -max_total_time=15 -max_len=4096
+        run: cargo +nightly fuzz run fuzz_base64 -- -max_total_time=15 -max_len=4096
 
 
 
