@@ -1,4 +1,4 @@
-﻿//! Schnorr Proof-of-Knowledge (PoK).
+//! Schnorr Proof-of-Knowledge (PoK).
 //!
 //! # What this proves
 //! A prover demonstrates knowledge of a secret `s` such that:
@@ -105,8 +105,9 @@ pub fn verify_proof(
     let pubkey_bytes = hex::decode(&commitment.point_hex)
         .map_err(|_| EnclaveError::ZkpInvalidInput("bad commitment hex".into()))?;
 
-    let pubkey = PublicKey::from_bytes(&pubkey_bytes)
-        .map_err(|_| EnclaveError::ZkpInvalidInput("cannot parse commitment as Ristretto point".into()))?;
+    let pubkey = PublicKey::from_bytes(&pubkey_bytes).map_err(|_| {
+        EnclaveError::ZkpInvalidInput("cannot parse commitment as Ristretto point".into())
+    })?;
 
     let sig_bytes = hex::decode(&proof.signature_hex)
         .map_err(|_| EnclaveError::ZkpInvalidInput("bad proof hex".into()))?;
@@ -128,7 +129,8 @@ fn derive_mini_secret(bytes: &[u8]) -> Result<MiniSecretKey, EnclaveError> {
     use ring::digest;
     let hash = digest::digest(&digest::SHA512, bytes);
     // Take the first 32 bytes of SHA-512 output
-    let seed: [u8; 32] = hash.as_ref()[..32].try_into()
+    let seed: [u8; 32] = hash.as_ref()[..32]
+        .try_into()
         .map_err(|_| EnclaveError::ZkpProve("SHA-512 output too short".into()))?;
     MiniSecretKey::from_bytes(&seed)
         .map_err(|_| EnclaveError::ZkpProve("cannot create MiniSecretKey from seed".into()))
@@ -143,7 +145,7 @@ mod tests {
     use super::*;
 
     const SECRET: &[u8] = b"my-super-secret-api-token-value-xyz";
-    const NONCE:  &[u8] = b"random-challenge-nonce-12345";
+    const NONCE: &[u8] = b"random-challenge-nonce-12345";
 
     #[test]
     fn commitment_is_deterministic() {

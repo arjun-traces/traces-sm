@@ -16,8 +16,9 @@
 use std::fs;
 use std::path::Path;
 
-use ring::aead::{Aad, BoundKey, Nonce, NonceSequence, OpeningKey, SealingKey,
-                 UnboundKey, AES_256_GCM, NONCE_LEN};
+use ring::aead::{
+    Aad, BoundKey, Nonce, NonceSequence, OpeningKey, SealingKey, UnboundKey, AES_256_GCM, NONCE_LEN,
+};
 use ring::hkdf;
 use ring::rand::{SecureRandom, SystemRandom};
 use zeroize::Zeroizing;
@@ -49,19 +50,23 @@ pub struct SimSealingProvider {
 
 impl SimSealingProvider {
     pub fn new(store_path: &str) -> Self {
-        fs::create_dir_all(store_path)
-            .expect("Cannot create store directory");
-        Self { key_path: Path::new(store_path).join(".sim_master_key") }
+        fs::create_dir_all(store_path).expect("Cannot create store directory");
+        Self {
+            key_path: Path::new(store_path).join(".sim_master_key"),
+        }
     }
 }
 
 impl SealingKeyProvider for SimSealingProvider {
     fn master_key(&self) -> Result<Zeroizing<[u8; 32]>, EnclaveError> {
         if self.key_path.exists() {
-            let bytes = fs::read(&self.key_path)
-                .map_err(|e| EnclaveError::Sealing { msg: "cannot read sim key" })?;
+            let bytes = fs::read(&self.key_path).map_err(|_e| EnclaveError::Sealing {
+                msg: "cannot read sim key",
+            })?;
             if bytes.len() < 32 {
-                return Err(EnclaveError::Sealing { msg: "sim key file too short" });
+                return Err(EnclaveError::Sealing {
+                    msg: "sim key file too short",
+                });
             }
             let mut key = Zeroizing::new([0u8; 32]);
             key.copy_from_slice(&bytes[..32]);
@@ -69,11 +74,16 @@ impl SealingKeyProvider for SimSealingProvider {
         } else {
             let rng = SystemRandom::new();
             let mut raw = Zeroizing::new([0u8; 32]);
-            rng.fill(raw.as_mut())
-                .map_err(|_| EnclaveError::Sealing { msg: "RNG failure during key gen" })?;
-            fs::write(&self.key_path, raw.as_ref())
-                .map_err(|_| EnclaveError::Sealing { msg: "cannot write sim key" })?;
-            log::info!("Simulation master sealing key created at {:?}", self.key_path);
+            rng.fill(raw.as_mut()).map_err(|_| EnclaveError::Sealing {
+                msg: "RNG failure during key gen",
+            })?;
+            fs::write(&self.key_path, raw.as_ref()).map_err(|_| EnclaveError::Sealing {
+                msg: "cannot write sim key",
+            })?;
+            log::info!(
+                "Simulation master sealing key created at {:?}",
+                self.key_path
+            );
             Ok(raw)
         }
     }
@@ -97,8 +107,9 @@ impl SealingKeyProvider for HwSealingProvider {
             req.keypolicy = Keypolicy::MRSIGNER;
             req.isvsvn = env!("CARGO_PKG_VERSION_MINOR").parse().unwrap_or(1);
 
-            let raw16 = req.egetkey()
-                .map_err(|_| EnclaveError::Sealing { msg: "EGETKEY failed" })?;
+            let raw16 = req.egetkey().map_err(|_| EnclaveError::Sealing {
+                msg: "EGETKEY failed",
+            })?;
 
             // EGETKEY returns 16 bytes; expand to 32 via SHA-256
             let expanded = ring::digest::digest(&ring::digest::SHA256, &raw16);
@@ -108,7 +119,9 @@ impl SealingKeyProvider for HwSealingProvider {
         }
         #[cfg(not(feature = "sgx-hw"))]
         {
-            Err(EnclaveError::Sealing { msg: "SGX hardware feature not compiled in" })
+            Err(EnclaveError::Sealing {
+                msg: "SGX hardware feature not compiled in",
+            })
         }
     }
 }
@@ -122,7 +135,8 @@ struct OneTimeNonce(Option<[u8; NONCE_LEN]>);
 
 impl NonceSequence for OneTimeNonce {
     fn advance(&mut self) -> Result<Nonce, ring::error::Unspecified> {
-        self.0.take()
+        self.0
+            .take()
             .map(|b| Nonce::assume_unique_for_key(b))
             .ok_or(ring::error::Unspecified)
     }
@@ -137,10 +151,7 @@ impl NonceSequence for OneTimeNonce {
 ///
 /// `purpose` MUST be a stable, unique ASCII string per use-case
 /// (e.g. `"seal:secrets"`, `"seal:paillier-priv"`, `"seal:token-key"`).
-fn derive_dek(
-    master: &[u8; 32],
-    purpose: &str,
-) -> Result<Zeroizing<[u8; 32]>, EnclaveError> {
+fn derive_dek(master: &[u8; 32], purpose: &str) -> Result<Zeroizing<[u8; 32]>, EnclaveError> {
     // HKDF: Extract → expand
     let salt = hkdf::Salt::new(hkdf::HKDF_SHA256, b"traces-sm-enclave-v1");
     let prk = salt.extract(master.as_ref());
@@ -176,8 +187,8 @@ pub fn seal(
     rng.fill(&mut nonce_bytes)
         .map_err(|_| EnclaveError::AesGcmEncrypt)?;
 
-    let unbound = UnboundKey::new(&AES_256_GCM, dek.as_ref())
-        .map_err(|_| EnclaveError::AesGcmEncrypt)?;
+    let unbound =
+        UnboundKey::new(&AES_256_GCM, dek.as_ref()).map_err(|_| EnclaveError::AesGcmEncrypt)?;
     let mut sealing_key = SealingKey::new(unbound, OneTimeNonce(Some(nonce_bytes)));
 
     let mut in_out = plaintext.to_vec();
@@ -200,7 +211,9 @@ pub fn unseal(
 ) -> Result<Vec<u8>, EnclaveError> {
     // Minimum: 12-byte nonce + 16-byte tag (empty plaintext would be 28 bytes)
     if blob.len() < NONCE_LEN + 16 {
-        return Err(EnclaveError::Unsealing { msg: "blob too short" });
+        return Err(EnclaveError::Unsealing {
+            msg: "blob too short",
+        });
     }
 
     let master = provider.master_key()?;
@@ -209,8 +222,8 @@ pub fn unseal(
     let mut nonce_bytes = [0u8; NONCE_LEN];
     nonce_bytes.copy_from_slice(&blob[..NONCE_LEN]);
 
-    let unbound = UnboundKey::new(&AES_256_GCM, dek.as_ref())
-        .map_err(|_| EnclaveError::AesGcmDecrypt)?;
+    let unbound =
+        UnboundKey::new(&AES_256_GCM, dek.as_ref()).map_err(|_| EnclaveError::AesGcmDecrypt)?;
     let mut opening_key = OpeningKey::new(unbound, OneTimeNonce(Some(nonce_bytes)));
 
     let mut in_out = blob[NONCE_LEN..].to_vec();
@@ -275,9 +288,9 @@ mod tests {
         }
 
         for handle in handles {
-            handle.join().expect("thread panicked during concurrency test");
+            handle
+                .join()
+                .expect("thread panicked during concurrency test");
         }
     }
 }
-
-

@@ -50,7 +50,10 @@ fn tc_phe_003_scalar_multiplication() {
     let k = kp();
     let c = encrypt(&k.public, &BigUint::from(7u64)).expect("enc");
     let scaled = multiply_ciphertext_by_scalar(&k.public, &c, &BigUint::from(5u64));
-    assert_eq!(decrypt(&k.private, &scaled).expect("dec"), BigUint::from(35u64));
+    assert_eq!(
+        decrypt(&k.private, &scaled).expect("dec"),
+        BigUint::from(35u64)
+    );
 }
 
 /// TC-PHE-004 — addition must be associative across three operands.
@@ -74,7 +77,10 @@ fn tc_phe_005_encryption_is_randomized() {
     let m = BigUint::from(12345u64);
     let a = encrypt(&k.public, &m).expect("enc");
     let b = encrypt(&k.public, &m).expect("enc");
-    assert_ne!(a, b, "Paillier encryption is deterministic — no semantic security");
+    assert_ne!(
+        a, b,
+        "Paillier encryption is deterministic — no semantic security"
+    );
 }
 
 /// TC-PHE-006 — re-randomization must preserve the plaintext.
@@ -92,7 +98,10 @@ fn tc_phe_006_rerandomize_preserves_plaintext() {
 #[test]
 fn tc_phe_007_oversized_plaintext_is_refused() {
     let k = kp();
-    assert!(encrypt(&k.public, &k.public.n).is_err(), "m = n must be refused");
+    assert!(
+        encrypt(&k.public, &k.public.n).is_err(),
+        "m = n must be refused"
+    );
     assert!(
         encrypt(&k.public, &(&k.public.n + BigUint::from(1u64))).is_err(),
         "m > n must be refused"
@@ -144,7 +153,10 @@ fn tc_phe_009_homomorphic_ops_validate_operands() {
 #[ignore = "slow: no small-prime sieve in gen_prime — see issue ENC-052"]
 fn tc_phe_010_2048_bit_key_roundtrips() {
     let k = generate_keypair(2048).expect("2048-bit keygen");
-    assert!(k.public.n.bits() >= 2047, "modulus is smaller than requested");
+    assert!(
+        k.public.n.bits() >= 2047,
+        "modulus is smaller than requested"
+    );
     let m = BigUint::from(123456789u64);
     let c = encrypt(&k.public, &m).expect("enc");
     assert_eq!(decrypt(&k.private, &c).expect("dec"), m);

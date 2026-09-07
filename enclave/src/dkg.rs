@@ -172,9 +172,13 @@ impl VssCommitment {
         let hex_list: Vec<String> = if !self.coefficient_commitments.is_empty() {
             self.coefficient_commitments.clone()
         } else if self.commitment_hex.starts_with('[') {
-            serde_json::from_str(&self.commitment_hex).unwrap_or_else(|_| vec![self.commitment_hex.clone()])
+            serde_json::from_str(&self.commitment_hex)
+                .unwrap_or_else(|_| vec![self.commitment_hex.clone()])
         } else if self.commitment_hex.contains(',') {
-            self.commitment_hex.split(',').map(|s| s.trim().to_string()).collect()
+            self.commitment_hex
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .collect()
         } else if !self.commitment_hex.is_empty() {
             vec![self.commitment_hex.clone()]
         } else {
@@ -187,14 +191,15 @@ impl VssCommitment {
 
         let mut points = Vec::with_capacity(hex_list.len());
         for h in hex_list {
-            let bytes = hex::decode(&h)
-                .map_err(|_| EnclaveError::ZkpInvalidInput("Invalid commitment hex string".into()))?;
-            let arr: [u8; 32] = bytes
-                .try_into()
-                .map_err(|_| EnclaveError::ZkpInvalidInput("Commitment point must be 32 bytes".into()))?;
-            let point = CompressedRistretto(arr)
-                .decompress()
-                .ok_or_else(|| EnclaveError::ZkpInvalidInput("Invalid Ristretto point in commitment".into()))?;
+            let bytes = hex::decode(&h).map_err(|_| {
+                EnclaveError::ZkpInvalidInput("Invalid commitment hex string".into())
+            })?;
+            let arr: [u8; 32] = bytes.try_into().map_err(|_| {
+                EnclaveError::ZkpInvalidInput("Commitment point must be 32 bytes".into())
+            })?;
+            let point = CompressedRistretto(arr).decompress().ok_or_else(|| {
+                EnclaveError::ZkpInvalidInput("Invalid Ristretto point in commitment".into())
+            })?;
             points.push(point);
         }
         Ok(points)
@@ -228,7 +233,7 @@ pub fn split_secret_vss(
     // Compute coefficient commitments C_k = a_k·G + b_k·H
     let mut coeff_commitments_hex = Vec::with_capacity(threshold);
     for k in 0..threshold {
-        let point = (g * &secret_coeffs[k]) + (&h * &blinding_coeffs[k]);
+        let point = (*g * &secret_coeffs[k]) + (&h * &blinding_coeffs[k]);
         coeff_commitments_hex.push(hex::encode(point.compress().to_bytes()));
     }
 
@@ -321,7 +326,7 @@ pub fn verify_vss_commitment(share: &SecretShare, commitment: &VssCommitment) ->
     // LHS = s_i·G + r_i·H
     let g = &RISTRETTO_BASEPOINT_TABLE;
     let h = crate::zkp::pedersen::pedersen_h();
-    let lhs = (g * &s_scalar) + (&h * &r_scalar);
+    let lhs = (*g * &s_scalar) + (&h * &r_scalar);
 
     // RHS = sum_{k=0}^{t-1} (x_i^k)·C_k
     let mut rhs = RistrettoPoint::identity();
@@ -393,7 +398,8 @@ mod tests {
         let (shares, _) = split_secret_vss(secret, 2, 3);
 
         let bad_commitment = VssCommitment {
-            commitment_hex: "0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+            commitment_hex: "0000000000000000000000000000000000000000000000000000000000000000"
+                .to_string(),
             coefficient_commitments: vec![
                 "0000000000000000000000000000000000000000000000000000000000000000".to_string(),
             ],
@@ -419,12 +425,19 @@ mod tests {
 
         // Test reconstruction with exact threshold (3 shares)
         let subset_shares = vec![shares[0].clone(), shares[2].clone(), shares[4].clone()];
-        let reconstructed = reconstruct_secret_bytes(&subset_shares, threshold).expect("Reconstruction failed");
+        let reconstructed =
+            reconstruct_secret_bytes(&subset_shares, threshold).expect("Reconstruction failed");
         assert_eq!(reconstructed, original_key);
 
         // Test reconstruction with more than threshold (4 shares)
-        let larger_subset = vec![shares[1].clone(), shares[2].clone(), shares[3].clone(), shares[4].clone()];
-        let reconstructed_large = reconstruct_secret_bytes(&larger_subset, threshold).expect("Reconstruction failed");
+        let larger_subset = vec![
+            shares[1].clone(),
+            shares[2].clone(),
+            shares[3].clone(),
+            shares[4].clone(),
+        ];
+        let reconstructed_large =
+            reconstruct_secret_bytes(&larger_subset, threshold).expect("Reconstruction failed");
         assert_eq!(reconstructed_large, original_key);
     }
 
@@ -441,4 +454,3 @@ mod tests {
         assert_eq!(recovered, secret);
     }
 }
-

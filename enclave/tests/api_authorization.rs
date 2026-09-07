@@ -85,12 +85,13 @@ fn tc_auth_003_tampered_payload_is_rejected() {
     let tmp = TempStore::new("tok-payload");
     let p = FixedKeyProvider::new(0x33);
     let svc = EnclaveTokenService::new(tmp.path(), &p).expect("token service");
-    let (_, jwt) = svc.issue_token("carol", vec!["read".into()], 3600, &p).expect("issue");
+    let (_, jwt) = svc
+        .issue_token("carol", vec!["read".into()], 3600, &p)
+        .expect("issue");
 
     let parts: Vec<&str> = jwt.split('.').collect();
-    let forged = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(
-        br#"{"sub":"root","iat":0,"exp":99999999999,"jti":"x","scopes":["admin"]}"#,
-    );
+    let forged = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .encode(br#"{"sub":"root","iat":0,"exp":99999999999,"jti":"x","scopes":["admin"]}"#);
     let forged_jwt = format!("{}.{}.{}", parts[0], forged, parts[2]);
     assert!(
         svc.verify_token(&forged_jwt).is_err(),
@@ -107,7 +108,10 @@ fn tc_auth_004_expired_token_is_rejected() {
     let (_, jwt) = svc.issue_token("dave", vec![], 0, &p).expect("issue");
 
     std::thread::sleep(std::time::Duration::from_millis(1100));
-    assert!(matches!(svc.verify_token(&jwt), Err(EnclaveError::TokenExpired)));
+    assert!(matches!(
+        svc.verify_token(&jwt),
+        Err(EnclaveError::TokenExpired)
+    ));
 }
 
 /// TC-AUTH-005 — a revoked token must be rejected.
@@ -120,7 +124,10 @@ fn tc_auth_005_revoked_token_is_rejected() {
 
     assert!(svc.verify_token(&jwt).is_ok());
     svc.revoke_token(&jti);
-    assert!(matches!(svc.verify_token(&jwt), Err(EnclaveError::TokenRevoked)));
+    assert!(matches!(
+        svc.verify_token(&jwt),
+        Err(EnclaveError::TokenRevoked)
+    ));
 }
 
 /// TC-AUTH-006 — a structurally malformed token must be rejected.
@@ -131,7 +138,10 @@ fn tc_auth_006_malformed_tokens_are_rejected() {
     let svc = EnclaveTokenService::new(tmp.path(), &p).expect("token service");
 
     for bad in ["", ".", "a.b", "a.b.c.d", "not-a-jwt", "...."] {
-        assert!(svc.verify_token(bad).is_err(), "accepted malformed token {bad:?}");
+        assert!(
+            svc.verify_token(bad).is_err(),
+            "accepted malformed token {bad:?}"
+        );
     }
 }
 
@@ -152,7 +162,10 @@ fn tc_auth_007_revocation_survives_restart() {
         let svc = EnclaveTokenService::new(tmp.path(), &p).expect("token service");
         let (jti, jwt) = svc.issue_token("frank", vec![], 3600, &p).expect("issue");
         svc.revoke_token(&jti);
-        assert!(svc.verify_token(&jwt).is_err(), "revocation did not take effect");
+        assert!(
+            svc.verify_token(&jwt).is_err(),
+            "revocation did not take effect"
+        );
         (jti, jwt)
     };
 

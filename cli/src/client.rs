@@ -1,6 +1,6 @@
 use reqwest::Client as ReqwestClient;
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 pub struct Client {
     base_url: String,
@@ -23,9 +23,20 @@ impl Client {
         Ok(res)
     }
 
-    pub async fn post<T: DeserializeOwned, B: Serialize>(&self, path: &str, body: &B) -> anyhow::Result<T> {
+    pub async fn post<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> anyhow::Result<T> {
         let url = format!("{}{}", self.base_url, path);
-        let res = self.http.post(&url).json(body).send().await?.json::<T>().await?;
+        let res = self
+            .http
+            .post(&url)
+            .json(body)
+            .send()
+            .await?
+            .json::<T>()
+            .await?;
         Ok(res)
     }
 }

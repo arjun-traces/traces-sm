@@ -1,7 +1,7 @@
-pub mod secrets;
-pub mod keys;
-pub mod lifecycle;
+pub mod attest;
 pub mod dkg;
 pub mod entropy;
-pub mod attest;
+pub mod keys;
+pub mod lifecycle;
+pub mod secrets;
 pub mod tokens;

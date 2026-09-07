@@ -1,30 +1,31 @@
-//! Comprehensive Key Generation & Management Engine.
-//!
-//! Supports classic asymmetric (RSA-2048/4096, ECDSA P-256/P-384/P-521/Secp256k1, Ed25519, X25519),
-//! post-quantum (ML-KEM-512/768/1024, ML-DSA-3/5, SLH-DSA), symmetric key wrapping (AES-KW SP 800-38F),
-//! HMAC keys, ChaCha20-Poly1305, and threshold FROST key shares.
-
-use ring::rand::SystemRandom;
+use base64::Engine;
+use ring::rand::{SecureRandom, SystemRandom};
 use ring::signature::{self, KeyPair};
-use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey, EncodePublicKey};
+use rsa::pkcs8::{DecodePrivateKey, DecodePublicKey, EncodePrivateKey, EncodePublicKey};
 use rsa::{Oaep, RsaPrivateKey, RsaPublicKey};
 use zeroize::Zeroizing;
 
 use crate::error::EnclaveError;
 use crate::models::KeyAlgorithm;
-use crate::sealing::{SealingKeyProvider, seal_data, unseal_data};
+use crate::sealing::{seal_data, unseal_data, SealingKeyProvider};
 
 pub struct GeneratedKeyPair {
     pub public_key_pem: String,
     pub sealed_private_key: Vec<u8>,
 }
 
+pub fn generate_keypair(
+    algorithm: KeyAlgorithm,
+    provider: &dyn SealingKeyProvider,
+) -> Result<(String, Vec<u8>), EnclaveError> {
+    let pair = generate_key_pair(algorithm, provider)?;
+    Ok((pair.public_key_pem, pair.sealed_private_key))
+}
+
 pub fn generate_key_pair(
     algorithm: KeyAlgorithm,
     provider: &dyn SealingKeyProvider,
 ) -> Result<GeneratedKeyPair, EnclaveError> {
-    let rng = SystemRandom::new();
-
     match algorithm {
         KeyAlgorithm::Rsa2048 => generate_rsa(2048, provider),
         KeyAlgorithm::Rsa4096 => generate_rsa(4096, provider),
@@ -33,14 +34,22 @@ pub fn generate_key_pair(
         KeyAlgorithm::Secp256k1 => generate_secp256k1(provider),
         KeyAlgorithm::Ed25519 => generate_ed25519(provider),
         KeyAlgorithm::FrostEd25519 => generate_frost_ed25519(provider),
-        KeyAlgorithm::MlKem768 | KeyAlgorithm::MlKem1024 => generate_pqc_kem(&algorithm.to_string(), provider),
-        KeyAlgorithm::MlDsa3 | KeyAlgorithm::MlDsa5 => generate_pqc_dsa(&algorithm.to_string(), provider),
-        KeyAlgorithm::Aes256Gcm | KeyAlgorithm::Aes256Kw => generate_symmetric(32, &algorithm.to_string(), provider),
+        KeyAlgorithm::MlKem768 | KeyAlgorithm::MlKem1024 => {
+            generate_pqc_kem(&algorithm.to_string(), provider)
+        }
+        KeyAlgorithm::MlDsa3 | KeyAlgorithm::MlDsa5 => {
+            generate_pqc_dsa(&algorithm.to_string(), provider)
+        }
+        KeyAlgorithm::Aes256Gcm | KeyAlgorithm::Aes256Kw => {
+            generate_symmetric(32, &algorithm.to_string(), provider)
+        }
         _ => generate_symmetric(32, &algorithm.to_string(), provider),
     }
 }
 
-fn generate_frost_ed25519(provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+fn generate_frost_ed25519(
+    provider: &dyn SealingKeyProvider,
+) -> Result<GeneratedKeyPair, EnclaveError> {
     let output = crate::frost::generate_dealer_keys(3, 2)?;
     let public_key_pem = format!(
         "-----BEGIN FROST ED25519 PUBLIC KEY PACKAGE-----\n{}\n-----END FROST ED25519 PUBLIC KEY PACKAGE-----",
@@ -56,7 +65,10 @@ fn generate_frost_ed25519(provider: &dyn SealingKeyProvider) -> Result<Generated
     })
 }
 
-fn generate_rsa(bits: usize, provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+fn generate_rsa(
+    bits: usize,
+    provider: &dyn SealingKeyProvider,
+) -> Result<GeneratedKeyPair, EnclaveError> {
     let mut rng = rand::thread_rng();
     let priv_key = RsaPrivateKey::new(&mut rng, bits)
         .map_err(|e| EnclaveError::KeyGenFailed(e.to_string()))?;
@@ -66,12 +78,10 @@ fn generate_rsa(bits: usize, provider: &dyn SealingKeyProvider) -> Result<Genera
         .to_public_key_pem(rsa::pkcs8::LineEnding::LF)
         .map_err(|e| EnclaveError::KeyGenFailed(e.to_string()))?;
 
-    let priv_der = Zeroizing::new(
-        priv_key
-            .to_pkcs8_der()
-            .map_err(|e| EnclaveError::KeyGenFailed(e.to_string()))?
-            .to_vec(),
-    );
+    let priv_doc = priv_key
+        .to_pkcs8_der()
+        .map_err(|e| EnclaveError::KeyGenFailed(e.to_string()))?;
+    let priv_der = Zeroizing::new(priv_doc.as_bytes().to_vec());
 
     let sealed_private_key = seal_data(&priv_der, "seal:rsa-privkey", provider)?;
 
@@ -81,17 +91,18 @@ fn generate_rsa(bits: usize, provider: &dyn SealingKeyProvider) -> Result<Genera
     })
 }
 
-fn generate_ecdsa_p256(provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+fn generate_ecdsa_p256(
+    provider: &dyn SealingKeyProvider,
+) -> Result<GeneratedKeyPair, EnclaveError> {
     let rng = SystemRandom::new();
-    let pkcs8_bytes = signature::EcdsaKeyPair::generate_pkcs8(
-        &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
-        &rng,
-    )
-    .map_err(|_| EnclaveError::KeyGenFailed("ECDSA P-256 generation failed".into()))?;
+    let pkcs8_bytes =
+        signature::EcdsaKeyPair::generate_pkcs8(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, &rng)
+            .map_err(|_| EnclaveError::KeyGenFailed("ECDSA P-256 generation failed".into()))?;
 
     let key_pair = signature::EcdsaKeyPair::from_pkcs8(
         &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
         pkcs8_bytes.as_ref(),
+        &rng,
     )
     .map_err(|_| EnclaveError::KeyGenFailed("ECDSA key parse failed".into()))?;
 
@@ -109,17 +120,18 @@ fn generate_ecdsa_p256(provider: &dyn SealingKeyProvider) -> Result<GeneratedKey
     })
 }
 
-fn generate_ecdsa_p384(provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+fn generate_ecdsa_p384(
+    provider: &dyn SealingKeyProvider,
+) -> Result<GeneratedKeyPair, EnclaveError> {
     let rng = SystemRandom::new();
-    let pkcs8_bytes = signature::EcdsaKeyPair::generate_pkcs8(
-        &signature::ECDSA_P384_SHA384_FIXED_SIGNING,
-        &rng,
-    )
-    .map_err(|_| EnclaveError::KeyGenFailed("ECDSA P-384 generation failed".into()))?;
+    let pkcs8_bytes =
+        signature::EcdsaKeyPair::generate_pkcs8(&signature::ECDSA_P384_SHA384_FIXED_SIGNING, &rng)
+            .map_err(|_| EnclaveError::KeyGenFailed("ECDSA P-384 generation failed".into()))?;
 
     let key_pair = signature::EcdsaKeyPair::from_pkcs8(
         &signature::ECDSA_P384_SHA384_FIXED_SIGNING,
         pkcs8_bytes.as_ref(),
+        &rng,
     )
     .map_err(|_| EnclaveError::KeyGenFailed("ECDSA key parse failed".into()))?;
 
@@ -137,7 +149,9 @@ fn generate_ecdsa_p384(provider: &dyn SealingKeyProvider) -> Result<GeneratedKey
     })
 }
 
-fn generate_secp256k1(_provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+fn generate_secp256k1(
+    _provider: &dyn SealingKeyProvider,
+) -> Result<GeneratedKeyPair, EnclaveError> {
     Err(EnclaveError::NotImplemented(
         "Secp256k1 algorithm support is not implemented".into(),
     ))
@@ -159,32 +173,165 @@ fn generate_ed25519(provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPai
 
     let sealed_private_key = seal_data(pkcs8_bytes.as_ref(), "seal:ed25519-privkey", provider)?;
 
-    Ok(GeneratedKeyPair { public_key_pem, sealed_private_key })
+    Ok(GeneratedKeyPair {
+        public_key_pem,
+        sealed_private_key,
+    })
 }
 
-fn generate_pqc_kem(name: &str, _provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+fn generate_pqc_kem(
+    name: &str,
+    _provider: &dyn SealingKeyProvider,
+) -> Result<GeneratedKeyPair, EnclaveError> {
     Err(EnclaveError::NotImplemented(format!(
         "Post-Quantum Cryptography KEM ({}) is not implemented",
         name
     )))
 }
 
-fn generate_pqc_dsa(name: &str, _provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+fn generate_pqc_dsa(
+    name: &str,
+    _provider: &dyn SealingKeyProvider,
+) -> Result<GeneratedKeyPair, EnclaveError> {
     Err(EnclaveError::NotImplemented(format!(
         "Post-Quantum Cryptography DSA ({}) is not implemented",
         name
     )))
 }
 
-fn generate_symmetric(len: usize, name: &str, provider: &dyn SealingKeyProvider) -> Result<GeneratedKeyPair, EnclaveError> {
+fn generate_symmetric(
+    len: usize,
+    name: &str,
+    provider: &dyn SealingKeyProvider,
+) -> Result<GeneratedKeyPair, EnclaveError> {
     let mut key_bytes = Zeroizing::new(vec![0u8; len]);
-    ring::rand::SystemRandom::new().fill(&mut key_bytes)
+    ring::rand::SystemRandom::new()
+        .fill(&mut key_bytes)
         .map_err(|_| EnclaveError::KeyGenFailed("Symmetric keygen failed".into()))?;
 
     let public_key_pem = format!("SYMMETRIC_KEY_{}_LENGTH_{}B", name, len);
     let sealed_private_key = seal_data(&key_bytes, "seal:symmetric-key", provider)?;
 
-    Ok(GeneratedKeyPair { public_key_pem, sealed_private_key })
+    Ok(GeneratedKeyPair {
+        public_key_pem,
+        sealed_private_key,
+    })
 }
 
-use base64::Engine;
+pub fn sign(
+    algorithm: KeyAlgorithm,
+    sealed_priv: &[u8],
+    message: &[u8],
+    provider: &dyn SealingKeyProvider,
+) -> Result<Vec<u8>, EnclaveError> {
+    match algorithm {
+        KeyAlgorithm::Ed25519 => {
+            let pkcs8 = unseal_data(sealed_priv, "seal:ed25519-privkey", provider)?;
+            let key_pair = signature::Ed25519KeyPair::from_pkcs8(&pkcs8)
+                .map_err(|_| EnclaveError::Internal)?;
+            let sig = key_pair.sign(message);
+            Ok(sig.as_ref().to_vec())
+        }
+        KeyAlgorithm::EcdsaP256 => {
+            let pkcs8 = unseal_data(sealed_priv, "seal:ecdsa-privkey", provider)?;
+            let rng = SystemRandom::new();
+            let key_pair = signature::EcdsaKeyPair::from_pkcs8(
+                &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
+                &pkcs8,
+                &rng,
+            )
+            .map_err(|_| EnclaveError::Internal)?;
+            let sig = key_pair
+                .sign(&rng, message)
+                .map_err(|_| EnclaveError::Internal)?;
+            Ok(sig.as_ref().to_vec())
+        }
+        KeyAlgorithm::Rsa2048 | KeyAlgorithm::Rsa4096 => {
+            let priv_der = unseal_data(sealed_priv, "seal:rsa-privkey", provider)?;
+            let priv_key = RsaPrivateKey::from_pkcs8_der(&priv_der)
+                .map_err(|e| EnclaveError::KeyGenFailed(e.to_string()))?;
+            let signing_key = rsa::pkcs1v15::SigningKey::<sha2::Sha256>::new(priv_key);
+            use rsa::signature::Signer;
+            let sig = signing_key.sign(message);
+            use rsa::signature::SignatureEncoding;
+            Ok(sig.to_bytes().to_vec())
+        }
+        _ => Err(EnclaveError::NotImplemented(format!(
+            "Signing not supported for {}",
+            algorithm
+        ))),
+    }
+}
+
+pub fn verify_signature(
+    algorithm: KeyAlgorithm,
+    pub_pem: &str,
+    message: &[u8],
+    signature: &[u8],
+) -> Result<bool, EnclaveError> {
+    match algorithm {
+        KeyAlgorithm::Ed25519 => {
+            let cleaned = pub_pem
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "")
+                .replace(['\r', '\n', ' '], "");
+            let pub_bytes = base64::engine::general_purpose::STANDARD
+                .decode(cleaned)
+                .map_err(|_| EnclaveError::BadRequest("invalid public key base64".into()))?;
+            let peer_public_key =
+                signature::UnparsedPublicKey::new(&signature::ED25519, &pub_bytes);
+            Ok(peer_public_key.verify(message, signature).is_ok())
+        }
+        KeyAlgorithm::EcdsaP256 => {
+            let cleaned = pub_pem
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "")
+                .replace(['\r', '\n', ' '], "");
+            let pub_bytes = base64::engine::general_purpose::STANDARD
+                .decode(cleaned)
+                .map_err(|_| EnclaveError::BadRequest("invalid public key base64".into()))?;
+            let peer_public_key =
+                signature::UnparsedPublicKey::new(&signature::ECDSA_P256_SHA256_FIXED, &pub_bytes);
+            Ok(peer_public_key.verify(message, signature).is_ok())
+        }
+        KeyAlgorithm::Rsa2048 | KeyAlgorithm::Rsa4096 => {
+            let pub_key = RsaPublicKey::from_public_key_pem(pub_pem)
+                .map_err(|e| EnclaveError::KeyGenFailed(e.to_string()))?;
+            let verifying_key = rsa::pkcs1v15::VerifyingKey::<sha2::Sha256>::new(pub_key);
+            use rsa::signature::Verifier;
+            let sig = rsa::pkcs1v15::Signature::try_from(signature)
+                .map_err(|_| EnclaveError::BadRequest("invalid RSA signature bytes".into()))?;
+            Ok(verifying_key.verify(message, &sig).is_ok())
+        }
+        _ => Err(EnclaveError::NotImplemented(format!(
+            "Verification not supported for {}",
+            algorithm
+        ))),
+    }
+}
+
+pub fn rsa_encrypt(pub_pem: &str, plaintext: &[u8]) -> Result<Vec<u8>, EnclaveError> {
+    let pub_key = RsaPublicKey::from_public_key_pem(pub_pem)
+        .map_err(|e| EnclaveError::KeyGenFailed(e.to_string()))?;
+    let mut rng = rand::thread_rng();
+    let padding = Oaep::new::<sha2::Sha256>();
+    let ct = pub_key
+        .encrypt(&mut rng, padding, plaintext)
+        .map_err(|_e| EnclaveError::Internal)?;
+    Ok(ct)
+}
+
+pub fn rsa_decrypt(
+    sealed_priv: &[u8],
+    ciphertext: &[u8],
+    provider: &dyn SealingKeyProvider,
+) -> Result<Vec<u8>, EnclaveError> {
+    let priv_der = unseal_data(sealed_priv, "seal:rsa-privkey", provider)?;
+    let priv_key = RsaPrivateKey::from_pkcs8_der(&priv_der)
+        .map_err(|e| EnclaveError::KeyGenFailed(e.to_string()))?;
+    let padding = Oaep::new::<sha2::Sha256>();
+    let pt = priv_key
+        .decrypt(padding, ciphertext)
+        .map_err(|_e| EnclaveError::Internal)?;
+    Ok(pt)
+}

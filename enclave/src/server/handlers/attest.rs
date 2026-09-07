@@ -1,4 +1,4 @@
-﻿//! Attestation handlers.
+//! Attestation handlers.
 
 use std::sync::Arc;
 
@@ -7,31 +7,46 @@ use crate::models::{AttestationMeasurements, AttestationQuoteResponse};
 use crate::server::router::HttpRequest;
 use crate::server::EnclaveState;
 
-pub fn quote(_req: &HttpRequest, state: &Arc<EnclaveState>) -> Result<serde_json::Value, EnclaveError> {
+pub fn quote(
+    _req: &HttpRequest,
+    state: &Arc<EnclaveState>,
+) -> Result<serde_json::Value, EnclaveError> {
     let measurements = get_measurements(&state.config.sgx_mode);
 
-    // In simulation mode, return a mock quote. In HW mode, call DCAP.
-    let quote_b64 = if state.config.sgx_mode == "HW" {
-        // TODO: implement real DCAP quote generation via sgx-isa / Intel DCAP libs
+    let (quote_hex, quote_b64) = if state.config.sgx_mode == "HW" {
         return Err(EnclaveError::BadRequest(
-            "Real DCAP quote generation requires SGX hardware. Set SGX_MODE=SIM for simulation.".into()
+            "Real DCAP quote generation requires SGX hardware. Set SGX_MODE=SIM for simulation."
+                .into(),
         ));
     } else {
-        // Simulation: return a placeholder quote identifying this as SIM mode
-        base64::Engine::encode(
+        let b64 = base64::Engine::encode(
             &base64::engine::general_purpose::STANDARD,
-            b"SGX-SIMULATION-QUOTE-NOT-FOR-PRODUCTION"
-        )
+            b"SGX-SIMULATION-QUOTE-NOT-FOR-PRODUCTION",
+        );
+        let hex = hex::encode(b"SGX-SIMULATION-QUOTE-NOT-FOR-PRODUCTION");
+        (hex, Some(b64))
     };
 
-    Ok(serde_json::to_value(AttestationQuoteResponse { quote_b64, measurements })?)
+    Ok(serde_json::to_value(AttestationQuoteResponse {
+        quote_hex,
+        quote_b64,
+        measurements,
+    })?)
 }
 
-pub fn measurements(_req: &HttpRequest, state: &Arc<EnclaveState>) -> Result<serde_json::Value, EnclaveError> {
-    Ok(serde_json::to_value(get_measurements(&state.config.sgx_mode))?)
+pub fn measurements(
+    _req: &HttpRequest,
+    state: &Arc<EnclaveState>,
+) -> Result<serde_json::Value, EnclaveError> {
+    Ok(serde_json::to_value(get_measurements(
+        &state.config.sgx_mode,
+    ))?)
 }
 
-pub fn verify(req: &HttpRequest, _state: &Arc<EnclaveState>) -> Result<serde_json::Value, EnclaveError> {
+pub fn verify(
+    _req: &HttpRequest,
+    _state: &Arc<EnclaveState>,
+) -> Result<serde_json::Value, EnclaveError> {
     // Verification delegates to host PCCS / Intel Trust Authority.
     // Enclave returns the public measurements for policy checking.
     Ok(serde_json::json!({
@@ -41,12 +56,14 @@ pub fn verify(req: &HttpRequest, _state: &Arc<EnclaveState>) -> Result<serde_jso
 }
 
 fn get_measurements(mode: &str) -> AttestationMeasurements {
+    let zeroes = "0".repeat(64);
     AttestationMeasurements {
-        // In SIM mode these are zeroed. In HW mode they come from EREPORT.
-        mrenclave_hex: "0".repeat(64),
-        mrsigner_hex:  "0".repeat(64),
-        isvprodid: 1,
-        isvsvn:    1,
-        sgx_mode:  mode.to_string(),
+        mr_enclave: zeroes.clone(),
+        mr_signer: zeroes.clone(),
+        mrenclave_hex: Some(zeroes.clone()),
+        mrsigner_hex: Some(zeroes),
+        isvprodid: Some(1),
+        isvsvn: Some(1),
+        sgx_mode: Some(mode.to_string()),
     }
 }

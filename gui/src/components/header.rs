@@ -1,4 +1,4 @@
-﻿use yew::prelude::*;
+use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
 pub struct HeaderProps {
@@ -10,25 +10,6 @@ pub struct HeaderProps {
 
 #[function_component(Header)]
 pub fn header(props: &HeaderProps) -> Html {
-    let nav_groups = vec![
-        ("KEYS & SECRETS", vec![
-            ("dashboard", "• Dashboard", "⌘1"),
-            ("lifecycle", "• Key Lifecycle [8]", "⌘2"),
-            ("vault",     "• Vault [14]", "⌘3"),
-        ]),
-        ("NETWORK", vec![
-            ("topology",  "• DKG Topology [3]", "⌘4"),
-        ]),
-        ("CRYPTOGRAPHY", vec![
-            ("entropy",   "• Entropy", "⌘5"),
-            ("zkp",       "• ZKP Sandbox", "⌘6"),
-        ]),
-        ("GOVERNANCE", vec![
-            ("policy",    "• Policy", "⌘7"),
-            ("audit",     "• Audit Logs", "⌘8"),
-        ]),
-    ];
-
     let on_ai_click = {
         let cb = props.on_toggle_ai.clone();
         Callback::from(move |_| cb.emit(()))
@@ -59,7 +40,7 @@ pub fn header(props: &HeaderProps) -> Html {
                     <span className="px-2.5 py-1 rounded bg-indigo-500/10 border border-indigo-500/30 text-indigo-300">
                         {"RA-TLS VERIFIED"}
                     </span>
-                    <button 
+                    <button
                         onclick={on_ai_click}
                         className="px-3 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-indigo-200 font-semibold hover:bg-indigo-600/50 flex items-center space-x-1">
                         <span>{"✦ Traces AI"}</span>

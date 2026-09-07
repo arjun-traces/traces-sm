@@ -3,10 +3,10 @@
 //! Enforces spec clauses from `docs/TECHNICAL_SPECIFICATION.md` against `traces-sm-enclave`.
 
 use traces_sm_enclave::drbg::HmacDrbg;
+use traces_sm_enclave::error::EnclaveError;
 use traces_sm_enclave::nist::Zeroizing;
 use traces_sm_enclave::sealing::{seal, unseal, SealingKeyProvider};
 use traces_sm_enclave::zkp::bulletproof::{prove_range, verify_range_proof, SerializedRangeProof};
-use traces_sm_enclave::error::EnclaveError;
 
 struct TestSealingProvider([u8; 32]);
 impl SealingKeyProvider for TestSealingProvider {

@@ -92,7 +92,13 @@ fn tc_lc_004_deactivated_key_permits_decrypt_only() {
 fn tc_lc_005_default_key_usage_grants_nothing() {
     let u = KeyUsage::default();
     assert!(
-        !(u.sign || u.verify || u.encrypt || u.decrypt || u.key_wrap || u.derive_key || u.authenticate),
+        !(u.sign
+            || u.verify
+            || u.encrypt
+            || u.decrypt
+            || u.key_wrap
+            || u.derive_key
+            || u.authenticate),
         "KeyUsage::default() must be deny-by-default"
     );
 }
@@ -113,7 +119,10 @@ fn tc_lc_006_usage_bitmask_gates_signing() {
 fn tc_cp_001_under_limit_is_permitted() {
     let mut cp = CryptoPeriod::default();
     assert_eq!(cp.max_bytes, MAX_BYTES, "AES-GCM limit must be 2^32 bytes");
-    assert!(cp.process(1024), "1 KiB must be under the cryptoperiod limit");
+    assert!(
+        cp.process(1024),
+        "1 KiB must be under the cryptoperiod limit"
+    );
 }
 
 /// TC-CP-002 — the boundary must be defined identically in both enforcers.
@@ -143,7 +152,10 @@ fn tc_cp_002_boundary_is_consistent_across_enforcers() {
 #[test]
 fn tc_cp_003_over_limit_is_refused() {
     let mut cp = CryptoPeriod::default();
-    assert!(!cp.process(MAX_BYTES + 1), "exceeding 2^32 bytes must be refused");
+    assert!(
+        !cp.process(MAX_BYTES + 1),
+        "exceeding 2^32 bytes must be refused"
+    );
 
     let engine = PolicyEngine::new(SecurityPolicy::default());
     assert!(engine.validate_cryptoperiod(MAX_BYTES + 1).is_err());
@@ -157,7 +169,10 @@ fn tc_cp_003_over_limit_is_refused() {
 #[test]
 fn tc_cp_004_refused_operation_does_not_consume_budget() {
     let mut cp = CryptoPeriod::default();
-    assert!(!cp.process(MAX_BYTES + 1), "oversized request must be refused");
+    assert!(
+        !cp.process(MAX_BYTES + 1),
+        "oversized request must be refused"
+    );
     assert_eq!(
         cp.bytes_processed, 0,
         "a refused operation consumed {} bytes of cryptoperiod budget \
@@ -194,7 +209,7 @@ fn tc_cp_005_counter_saturates_instead_of_wrapping() {
 fn tc_kdf_001_output_length_is_exact() {
     for len in [1usize, 16, 32, 33, 64, 100] {
         let okm = sp800_108_kdf(b"key-material", b"label", b"context", len);
-        assert_eq!(okm.as_ref().len(), len, "KDF returned wrong length for L={len}");
+        assert_eq!(okm.len(), len, "KDF returned wrong length for L={len}");
     }
 }
 
@@ -203,19 +218,25 @@ fn tc_kdf_001_output_length_is_exact() {
 fn tc_kdf_002_is_deterministic() {
     let a = sp800_108_kdf(b"ki", b"label", b"ctx", 32);
     let b = sp800_108_kdf(b"ki", b"label", b"ctx", 32);
-    assert_eq!(a.as_ref(), b.as_ref(), "KDF is not deterministic");
+    assert_eq!(&a[..], &b[..], "KDF is not deterministic");
 }
 
 /// TC-KDF-003 — label and context must be domain-separating.
 #[test]
 fn tc_kdf_003_label_and_context_separate_domains() {
-    let base = sp800_108_kdf(b"ki", b"label", b"ctx", 32).as_ref().clone();
-    let other_label = sp800_108_kdf(b"ki", b"LABEL", b"ctx", 32).as_ref().clone();
-    let other_ctx = sp800_108_kdf(b"ki", b"label", b"CTX", 32).as_ref().clone();
-    let other_ki = sp800_108_kdf(b"KI", b"label", b"ctx", 32).as_ref().clone();
+    let base = sp800_108_kdf(b"ki", b"label", b"ctx", 32).to_vec();
+    let other_label = sp800_108_kdf(b"ki", b"LABEL", b"ctx", 32).to_vec();
+    let other_ctx = sp800_108_kdf(b"ki", b"label", b"CTX", 32).to_vec();
+    let other_ki = sp800_108_kdf(b"KI", b"label", b"ctx", 32).to_vec();
 
-    assert_ne!(base, other_label, "changing Label did not change the output");
-    assert_ne!(base, other_ctx, "changing Context did not change the output");
+    assert_ne!(
+        base, other_label,
+        "changing Label did not change the output"
+    );
+    assert_ne!(
+        base, other_ctx,
+        "changing Context did not change the output"
+    );
     assert_ne!(base, other_ki, "changing Ki did not change the output");
 }
 
@@ -227,8 +248,8 @@ fn tc_kdf_003_label_and_context_separate_domains() {
 /// different requests can produce overlapping keying material.
 #[test]
 fn tc_kdf_004_length_is_bound_into_the_prf() {
-    let short = sp800_108_kdf(b"ki", b"label", b"ctx", 32).as_ref().clone();
-    let long = sp800_108_kdf(b"ki", b"label", b"ctx", 64).as_ref().clone();
+    let short = sp800_108_kdf(b"ki", b"label", b"ctx", 32).to_vec();
+    let long = sp800_108_kdf(b"ki", b"label", b"ctx", 64).to_vec();
     assert_ne!(
         short[..],
         long[..32],

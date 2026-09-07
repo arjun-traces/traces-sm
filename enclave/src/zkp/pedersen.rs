@@ -89,13 +89,7 @@ pub fn commit_with_blinding(
     let g = &RISTRETTO_BASEPOINT_TABLE;
     let h = pedersen_h();
     let v_scalar = Scalar::from(value);
-    // C = v·G + r·H
-    let point = RistrettoPoint::multiscalar_mul(
-        &[v_scalar, *blinding],
-        &[*g * Scalar::ONE, h], // g * 1 = G base point
-    );
-    // simpler: v*G + r*H directly
-    let c = (g * &v_scalar) + (&h * blinding);
+    let c = (*g * &v_scalar) + (&h * blinding);
     Ok(PedersenCommitment {
         point_hex: hex::encode(c.compress().to_bytes()),
     })
@@ -187,9 +181,9 @@ fn decompress(c: &PedersenCommitment) -> Result<RistrettoPoint, EnclaveError> {
     let arr: [u8; 32] = bytes
         .try_into()
         .map_err(|_| EnclaveError::ZkpInvalidInput("commitment must be 32 bytes".into()))?;
-    CompressedRistretto(arr)
-        .decompress()
-        .ok_or_else(|| EnclaveError::ZkpInvalidInput("commitment is not a valid Ristretto point".into()))
+    CompressedRistretto(arr).decompress().ok_or_else(|| {
+        EnclaveError::ZkpInvalidInput("commitment is not a valid Ristretto point".into())
+    })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -209,7 +203,10 @@ mod tests {
     #[test]
     fn wrong_value_fails() {
         let (c, o) = commit(42).unwrap();
-        let bad_opening = PedersenOpening { value: 99, blinding_hex: o.blinding_hex };
+        let bad_opening = PedersenOpening {
+            value: 99,
+            blinding_hex: o.blinding_hex,
+        };
         assert!(!verify_opening(&c, &bad_opening).unwrap());
     }
 

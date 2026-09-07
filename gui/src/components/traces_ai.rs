@@ -1,6 +1,5 @@
-﻿use yew::prelude::*;
-use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
+use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
 pub struct TracesAiProps {
@@ -17,12 +16,14 @@ pub struct ChatMessage {
 #[function_component(TracesAiPanel)]
 pub fn traces_ai_panel(props: &TracesAiProps) -> Html {
     let api_key = use_state(|| String::new());
-    let messages = use_state(|| vec![
+    let messages = use_state(|| {
+        vec![
         ChatMessage {
             sender: "assistant".to_string(),
             text: "Enclave is HW_ACTIVE and all six security policy invariants are enforcing. Ask me about a key, a policy decision, or an attestation quote.".to_string(),
         }
-    ]);
+    ]
+    });
     let input_text = use_state(|| String::new());
 
     if !props.is_open {
@@ -56,11 +57,16 @@ pub fn traces_ai_panel(props: &TracesAiProps) -> Html {
         let api_key = (*api_key).clone();
         Callback::from(move |_| {
             let txt = (*input_text).clone();
-            if txt.trim().is_empty() { return; }
+            if txt.trim().is_empty() {
+                return;
+            }
 
             let mut current = (*messages).clone();
-            current.push(ChatMessage { sender: "user".to_string(), text: txt.clone() });
-            
+            current.push(ChatMessage {
+                sender: "user".to_string(),
+                text: txt.clone(),
+            });
+
             // Simulating Anthropic Claude API completion or host proxy response
             let reply = if txt.contains("k-104") {
                 "Key k-104 (RSA-2048) was deactivated because its cryptoperiod volume limit reached 4.2 GB (2^32 bytes for AES-GCM). It is restricted to historical decryption."
@@ -74,7 +80,10 @@ pub fn traces_ai_panel(props: &TracesAiProps) -> Html {
                 "Traces AI: Enclave telemetry normal. Enter an Anthropic API Key in settings for live Claude intelligence."
             };
 
-            current.push(ChatMessage { sender: "assistant".to_string(), text: reply.to_string() });
+            current.push(ChatMessage {
+                sender: "assistant".to_string(),
+                text: reply.to_string(),
+            });
             messages.set(current);
             input_text.set(String::new());
         })
@@ -94,9 +103,9 @@ pub fn traces_ai_panel(props: &TracesAiProps) -> Html {
 
             <div className="p-3 bg-gray-950/60 border-b border-gray-800 text-xs space-y-2">
                 <label className="text-[10px] text-gray-400 font-mono">{"ANTHROPIC API KEY (CLAUDE):"}</label>
-                <input 
+                <input
                     type="password"
-                    placeholder="sk-ant-api..." 
+                    placeholder="sk-ant-api..."
                     value={(*api_key).clone()}
                     oninput={on_key_change}
                     className="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-indigo-300 font-mono focus:outline-none focus:border-indigo-500"
@@ -128,14 +137,14 @@ pub fn traces_ai_panel(props: &TracesAiProps) -> Html {
                 </div>
 
                 <div className="flex space-x-2">
-                    <input 
-                        type="text" 
-                        placeholder="Ask about keys, policy, attestation..." 
+                    <input
+                        type="text"
+                        placeholder="Ask about keys, policy, attestation..."
                         value={(*input_text).clone()}
                         oninput={on_input_change}
                         className="flex-1 bg-gray-900 border border-gray-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
                     />
-                    <button 
+                    <button
                         onclick={on_send}
                         className="px-3 py-1.5 bg-indigo-600 text-white font-medium rounded-lg text-xs hover:bg-indigo-500">
                         {"Send"}

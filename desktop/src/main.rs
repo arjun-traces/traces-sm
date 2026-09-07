@@ -8,7 +8,7 @@ fn main() -> eframe::Result<()> {
             .with_title("traces-sm — SGX Secrets & Key Management Console"),
         ..Default::default()
     };
-    
+
     eframe::run_native(
         "traces-sm",
         options,
@@ -46,16 +46,40 @@ impl eframe::App for TracesSmApp {
         egui::TopBottomPanel::top("header_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new("🔒 traces-sm").strong().size(16.0));
-                ui.label(egui::RichText::new("SGX Secrets & Key Management").size(12.0).color(egui::Color32::GRAY));
-                
+                ui.label(
+                    egui::RichText::new("SGX Secrets & Key Management")
+                        .size(12.0)
+                        .color(egui::Color32::GRAY),
+                );
+
                 ui.separator();
-                ui.label(egui::RichText::new("Ubuntu 24.04 (GTK3)").monospace().size(10.0));
-                ui.label(egui::RichText::new("SGX HW_ACTIVE").monospace().strong().color(egui::Color32::GREEN));
-                ui.label(egui::RichText::new("RA-TLS VERIFIED").monospace().color(egui::Color32::LIGHT_BLUE));
+                ui.label(
+                    egui::RichText::new("Ubuntu 24.04 (GTK3)")
+                        .monospace()
+                        .size(10.0),
+                );
+                ui.label(
+                    egui::RichText::new("SGX HW_ACTIVE")
+                        .monospace()
+                        .strong()
+                        .color(egui::Color32::GREEN),
+                );
+                ui.label(
+                    egui::RichText::new("RA-TLS VERIFIED")
+                        .monospace()
+                        .color(egui::Color32::LIGHT_BLUE),
+                );
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label("A admin-role");
-                    if ui.button(if self.show_ai_panel { "✦ Traces AI (Open)" } else { "✦ Traces AI" }).clicked() {
+                    if ui
+                        .button(if self.show_ai_panel {
+                            "✦ Traces AI (Open)"
+                        } else {
+                            "✦ Traces AI"
+                        })
+                        .clicked()
+                    {
                         self.show_ai_panel = !self.show_ai_panel;
                     }
                 });
@@ -70,27 +94,58 @@ impl eframe::App for TracesSmApp {
         });
 
         // Left Sidebar Navigation
-        egui::SidePanel::left("left_sidebar").resizable(false).default_width(200.0).show(ctx, |ui| {
-            ui.add_space(8.0);
-            ui.label(egui::RichText::new("KEYS & SECRETS").strong().size(11.0).color(egui::Color32::GRAY));
-            ui.selectable_value(&mut self.active_tab, "dashboard".to_string(), "• Dashboard");
-            ui.selectable_value(&mut self.active_tab, "lifecycle".to_string(), "• Key Lifecycle [8]");
-            ui.selectable_value(&mut self.active_tab, "vault".to_string(), "• Vault [14]");
+        egui::SidePanel::left("left_sidebar")
+            .resizable(false)
+            .default_width(200.0)
+            .show(ctx, |ui| {
+                ui.add_space(8.0);
+                ui.label(
+                    egui::RichText::new("KEYS & SECRETS")
+                        .strong()
+                        .size(11.0)
+                        .color(egui::Color32::GRAY),
+                );
+                ui.selectable_value(&mut self.active_tab, "dashboard".to_string(), "• Dashboard");
+                ui.selectable_value(
+                    &mut self.active_tab,
+                    "lifecycle".to_string(),
+                    "• Key Lifecycle [8]",
+                );
+                ui.selectable_value(&mut self.active_tab, "vault".to_string(), "• Vault [14]");
 
-            ui.add_space(12.0);
-            ui.label(egui::RichText::new("NETWORK").strong().size(11.0).color(egui::Color32::GRAY));
-            ui.selectable_value(&mut self.active_tab, "topology".to_string(), "• DKG Topology [3]");
+                ui.add_space(12.0);
+                ui.label(
+                    egui::RichText::new("NETWORK")
+                        .strong()
+                        .size(11.0)
+                        .color(egui::Color32::GRAY),
+                );
+                ui.selectable_value(
+                    &mut self.active_tab,
+                    "topology".to_string(),
+                    "• DKG Topology [3]",
+                );
 
-            ui.add_space(12.0);
-            ui.label(egui::RichText::new("CRYPTOGRAPHY").strong().size(11.0).color(egui::Color32::GRAY));
-            ui.selectable_value(&mut self.active_tab, "entropy".to_string(), "• Entropy");
-            ui.selectable_value(&mut self.active_tab, "zkp".to_string(), "• ZKP Sandbox");
+                ui.add_space(12.0);
+                ui.label(
+                    egui::RichText::new("CRYPTOGRAPHY")
+                        .strong()
+                        .size(11.0)
+                        .color(egui::Color32::GRAY),
+                );
+                ui.selectable_value(&mut self.active_tab, "entropy".to_string(), "• Entropy");
+                ui.selectable_value(&mut self.active_tab, "zkp".to_string(), "• ZKP Sandbox");
 
-            ui.add_space(12.0);
-            ui.label(egui::RichText::new("GOVERNANCE").strong().size(11.0).color(egui::Color32::GRAY));
-            ui.selectable_value(&mut self.active_tab, "policy".to_string(), "• Policy");
-            ui.selectable_value(&mut self.active_tab, "audit".to_string(), "• Audit Logs");
-        });
+                ui.add_space(12.0);
+                ui.label(
+                    egui::RichText::new("GOVERNANCE")
+                        .strong()
+                        .size(11.0)
+                        .color(egui::Color32::GRAY),
+                );
+                ui.selectable_value(&mut self.active_tab, "policy".to_string(), "• Policy");
+                ui.selectable_value(&mut self.active_tab, "audit".to_string(), "• Audit Logs");
+            });
 
         // Right-hand Traces AI Panel (Anthropic API Ready)
         if self.show_ai_panel {
@@ -121,7 +176,7 @@ impl eframe::App for TracesSmApp {
                         if !self.ai_input.trim().is_empty() {
                             let input_copy = self.ai_input.clone();
                             self.ai_messages.push(("user".to_string(), input_copy.clone()));
-                            
+
                             let reply = if input_copy.contains("k-104") {
                                 "Key k-104 (RSA-2048) was deactivated because its cryptoperiod volume limit reached 4.2 GB. It is restricted to historical decryption."
                             } else if !self.anthropic_api_key.is_empty() {

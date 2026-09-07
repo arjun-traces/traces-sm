@@ -1,4 +1,4 @@
-﻿# `traces-sm` — Project Status & Maturity Disclosure
+# `traces-sm` — Project Status & Maturity Disclosure
 
 > **Security Disclosure**: `traces-sm` is an open-source research and engineering framework. It has **not** undergone an independent third-party cryptographic security audit or NIST CMVP certification. Do not use for high-assurance production workloads without conducting your own threat modeling and security audits.
 

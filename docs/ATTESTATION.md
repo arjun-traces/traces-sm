@@ -1,4 +1,4 @@
-﻿# Intel SGX Remote Attestation & RA-TLS Specification
+# Intel SGX Remote Attestation & RA-TLS Specification
 
 This document details the Remote Attestation architecture used by `traces-sm` for verifying enclave identity and establishing peer-to-peer mTLS network sessions.
 

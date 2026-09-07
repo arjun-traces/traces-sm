@@ -9,9 +9,9 @@
 
 mod common;
 
+use chrono::Utc;
 use common::TempStore;
 use std::collections::HashMap;
-use chrono::Utc;
 use uuid::Uuid;
 
 use traces_sm_enclave::models::SecretType;
@@ -67,8 +67,14 @@ fn tc_st_003_soft_delete_hides_record() {
     store.save(&r, b"blob").expect("save");
 
     store.soft_delete(&r.id).expect("soft delete");
-    assert!(store.load(&r.id).is_err(), "soft-deleted record still loadable");
-    assert!(store.list().expect("list").is_empty(), "soft-deleted record still listed");
+    assert!(
+        store.load(&r.id).is_err(),
+        "soft-deleted record still loadable"
+    );
+    assert!(
+        store.list().expect("list").is_empty(),
+        "soft-deleted record still listed"
+    );
 }
 
 /// TC-ST-004 — CRITICAL: crypto-shred must overwrite with random bytes.
@@ -101,7 +107,11 @@ fn tc_st_004_crypto_shred_uses_random_fill() {
     store.crypto_shred(&r.id).expect("crypto_shred");
 
     let witness = std::fs::read(&link_path).expect("read witness through hard link");
-    assert_eq!(witness.len(), blob.len(), "overwrite changed the file length");
+    assert_eq!(
+        witness.len(),
+        blob.len(),
+        "overwrite changed the file length"
+    );
 
     let distinct = common::distinct_bytes(&witness);
     assert!(
@@ -124,8 +134,14 @@ fn tc_st_005_crypto_shred_unlinks_both_files() {
 
     store.crypto_shred(&r.id).expect("crypto_shred");
 
-    assert!(!tmp.0.join(format!("{}.blob", r.id)).exists(), ".blob survived");
-    assert!(!tmp.0.join(format!("{}.meta.json", r.id)).exists(), ".meta.json survived");
+    assert!(
+        !tmp.0.join(format!("{}.blob", r.id)).exists(),
+        ".blob survived"
+    );
+    assert!(
+        !tmp.0.join(format!("{}.meta.json", r.id)).exists(),
+        ".meta.json survived"
+    );
     assert!(!store.exists(&r.id));
 }
 
@@ -211,5 +227,8 @@ fn tc_st_009_name_lookup_finds_live_records_only() {
 
     assert!(store.name_exists("eta"));
     store.soft_delete(&r.id).expect("soft delete");
-    assert!(!store.name_exists("eta"), "a soft-deleted name is still claimed");
+    assert!(
+        !store.name_exists("eta"),
+        "a soft-deleted name is still claimed"
+    );
 }

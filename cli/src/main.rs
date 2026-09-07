@@ -11,7 +11,8 @@ fn get_ascii_key_banner() -> String {
         format!(
             "|  |'  '|  |====|===\\__/\\____/\\____[ {} ]====|",
             "TRACES-SM".cyan().bold()
-        ).yellow(),
+        )
+        .yellow(),
         r#" \  \__/  /                              │ │ │"#.yellow(),
         r#"  '-....-'                               ╵ ╵ ╵"#.yellow()
     )
@@ -32,7 +33,12 @@ struct Cli {
     command: Commands,
 
     /// Server endpoint URL (default: http://localhost:8080)
-    #[arg(short = 's', long, global = true, default_value = "http://localhost:8080")]
+    #[arg(
+        short = 's',
+        long,
+        global = true,
+        default_value = "http://localhost:8080"
+    )]
     server: String,
 }
 
@@ -200,7 +206,12 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Secret { action } => match action {
-            SecretCommands::Create { name, value, secret_type, ttl } => {
+            SecretCommands::Create {
+                name,
+                value,
+                secret_type,
+                ttl,
+            } => {
                 let payload = serde_json::json!({
                     "name": name,
                     "value": value,
@@ -208,11 +219,18 @@ async fn main() -> anyhow::Result<()> {
                     "ttl": ttl
                 });
                 let res: serde_json::Value = client.post("/v1/secrets", &payload).await?;
-                println!("{}", format!("✓ Secret '{}' sealed in SGX enclave: {}", name, res).green());
+                println!(
+                    "{}",
+                    format!("✓ Secret '{}' sealed in SGX enclave: {}", name, res).green()
+                );
             }
             SecretCommands::Get { name } => {
-                let res: serde_json::Value = client.get(&format!("/v1/secrets?name={}", name)).await?;
-                println!("{}", format!("Secret Metadata for '{}': {}", name, res).cyan());
+                let res: serde_json::Value =
+                    client.get(&format!("/v1/secrets?name={}", name)).await?;
+                println!(
+                    "{}",
+                    format!("Secret Metadata for '{}': {}", name, res).cyan()
+                );
             }
             SecretCommands::List => {
                 let res: serde_json::Value = client.get("/v1/secrets").await?;
@@ -223,31 +241,62 @@ async fn main() -> anyhow::Result<()> {
             KeyCommands::Generate { name, algorithm } => {
                 let payload = serde_json::json!({ "name": name, "algorithm": algorithm });
                 let res: serde_json::Value = client.post("/v1/keys", &payload).await?;
-                println!("{}", format!("✓ Key '{}' ({}) generated inside SGX enclave: {}", name, algorithm, res).green());
+                println!(
+                    "{}",
+                    format!(
+                        "✓ Key '{}' ({}) generated inside SGX enclave: {}",
+                        name, algorithm, res
+                    )
+                    .green()
+                );
             }
             KeyCommands::Public { name } => {
                 let res: serde_json::Value = client.get(&format!("/v1/keys?name={}", name)).await?;
-                println!("{}", format!("Public Key PEM for '{}': {}", name, res).cyan());
+                println!(
+                    "{}",
+                    format!("Public Key PEM for '{}': {}", name, res).cyan()
+                );
             }
             KeyCommands::Sign { name, message } => {
                 let payload = serde_json::json!({ "name": name, "message": message });
                 let res: serde_json::Value = client.post("/v1/keys/sign", &payload).await?;
                 println!("{}", format!("Signature Output: {}", res).yellow());
             }
-            KeyCommands::Verify { name, message, signature } => {
-                let payload = serde_json::json!({ "name": name, "message": message, "signature": signature });
+            KeyCommands::Verify {
+                name,
+                message,
+                signature,
+            } => {
+                let payload =
+                    serde_json::json!({ "name": name, "message": message, "signature": signature });
                 let res: serde_json::Value = client.post("/v1/keys/verify", &payload).await?;
                 println!("{}", format!("Signature Verification: {}", res).green());
             }
         },
         Commands::Lifecycle { action } => match action {
             LifecycleCommands::Transition { id, state } => {
-                let res: serde_json::Value = client.post("/v1/lifecycle/transition", &serde_json::json!({ "key_id": id, "target_state": state })).await?;
-                println!("{}", format!("✓ Key {} transitioned to state {}: {}", id, state, res).green());
+                let res: serde_json::Value = client
+                    .post(
+                        "/v1/lifecycle/transition",
+                        &serde_json::json!({ "key_id": id, "target_state": state }),
+                    )
+                    .await?;
+                println!(
+                    "{}",
+                    format!("✓ Key {} transitioned to state {}: {}", id, state, res).green()
+                );
             }
             LifecycleCommands::Shred { id } => {
-                let res: serde_json::Value = client.post("/v1/lifecycle/shred", &serde_json::json!({ "key_id": id, "confirmation": id })).await?;
-                println!("{}", format!("✓ Key {} crypto-shredded (SP 800-88): {}", id, res).red());
+                let res: serde_json::Value = client
+                    .post(
+                        "/v1/lifecycle/shred",
+                        &serde_json::json!({ "key_id": id, "confirmation": id }),
+                    )
+                    .await?;
+                println!(
+                    "{}",
+                    format!("✓ Key {} crypto-shredded (SP 800-88): {}", id, res).red()
+                );
             }
         },
         Commands::Dkg { action } => match action {
@@ -259,20 +308,31 @@ async fn main() -> anyhow::Result<()> {
         Commands::Entropy { action } => match action {
             EntropyCommands::Health => {
                 let res: serde_json::Value = client.get("/v1/entropy/health").await?;
-                println!("{}", format!("NIST SP 800-90B DRBG Health (APT & RCT): {}", res).yellow());
+                println!(
+                    "{}",
+                    format!("NIST SP 800-90B DRBG Health (APT & RCT): {}", res).yellow()
+                );
             }
         },
         Commands::Zkp { action } => match action {
             ZkpCommands::Prove { token } => {
                 let payload = serde_json::json!({ "token": token });
                 let res: serde_json::Value = client.post("/v1/zkp/prove", &payload).await?;
-                println!("{}", format!("Schnorr Proof-of-Knowledge: {}", res).magenta());
+                println!(
+                    "{}",
+                    format!("Schnorr Proof-of-Knowledge: {}", res).magenta()
+                );
             }
         },
         Commands::Attest { action } => match action {
             AttestCommands::Quote => {
                 let res: serde_json::Value = client.get("/v1/attest/quote").await?;
-                println!("{}", format!("Intel DCAP Attestation Quote: {}", res).bold().blue());
+                println!(
+                    "{}",
+                    format!("Intel DCAP Attestation Quote: {}", res)
+                        .bold()
+                        .blue()
+                );
             }
         },
         Commands::Health => {

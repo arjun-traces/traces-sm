@@ -9,10 +9,9 @@
 //!   Claims : { sub, iat, exp, jti, scopes }
 //!   Sig    : Ed25519 over base64url(header).base64url(payload)
 
+use ring::signature::KeyPair;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
-use ring::signature::KeyPair;
-
 
 use base64::Engine as _;
 use chrono::Utc;
@@ -129,8 +128,8 @@ impl EnclaveTokenService {
 
         // Decode claims
         let payload_json = b64url_decode(parts[1])?;
-        let claims: Claims = serde_json::from_slice(&payload_json)
-            .map_err(|_| EnclaveError::Unauthorized)?;
+        let claims: Claims =
+            serde_json::from_slice(&payload_json).map_err(|_| EnclaveError::Unauthorized)?;
 
         // Check expiry
         if Utc::now().timestamp() > claims.exp {
@@ -154,7 +153,11 @@ impl EnclaveTokenService {
     // Internal
     // ─────────────────────────────────────────────────────────────────────
 
-    fn sign_jwt(&self, claims: &Claims, provider: &dyn SealingKeyProvider) -> Result<String, EnclaveError> {
+    fn sign_jwt(
+        &self,
+        claims: &Claims,
+        provider: &dyn SealingKeyProvider,
+    ) -> Result<String, EnclaveError> {
         let header = r#"{"alg":"EdDSA","typ":"JWT"}"#;
         let header_b64 = b64url_encode(header.as_bytes());
         let payload_json = serde_json::to_vec(claims)?;

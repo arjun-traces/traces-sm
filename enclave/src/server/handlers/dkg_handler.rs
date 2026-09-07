@@ -1,16 +1,16 @@
-use crate::error::EnclaveError;
-use crate::models::{
-    ApiResponse, DkgSetupRequest, FrostDkgSetupRequest, FrostCommitRequest,
-    FrostSignShareRequest, FrostAggregateRequest, FrostVerifyRequest,
-};
-use crate::store::Store;
 use crate::dkg::{split_secret_vss, SecretShare};
+use crate::error::EnclaveError;
 use crate::frost::{
-    generate_dealer_keys, round1_commit, round2_sign_share, aggregate_signature,
-    verify_signature, FrostKeyGenOutput, FrostRound1Output,
+    aggregate_signature, generate_dealer_keys, round1_commit, round2_sign_share, verify_signature,
+    FrostKeyGenOutput, FrostRound1Output,
+};
+use crate::models::{
+    ApiResponse, DkgSetupRequest, FrostAggregateRequest, FrostCommitRequest, FrostDkgSetupRequest,
+    FrostSignShareRequest, FrostVerifyRequest,
 };
 use crate::server::router::HttpRequest;
 use crate::server::EnclaveState;
+use crate::store::Store;
 use std::sync::Arc;
 
 pub fn handle_dkg_setup(
@@ -19,7 +19,7 @@ pub fn handle_dkg_setup(
 ) -> Result<ApiResponse<Vec<SecretShare>>, EnclaveError> {
     let (_record, blob) = store.load(&req.secret_id)?;
     let secret_val = *blob.first().unwrap_or(&0);
-    
+
     let (shares, _commitment) = split_secret_vss(secret_val, req.threshold, req.total);
     Ok(ApiResponse::ok(shares))
 }

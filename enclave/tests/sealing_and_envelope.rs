@@ -53,7 +53,11 @@ fn tc_seal_001_roundtrip_is_lossless() {
 fn tc_seal_002_empty_plaintext_roundtrips() {
     let p = FixedKeyProvider::new(0x01);
     let blob = seal(b"", "test:empty", &p).expect("seal");
-    assert_eq!(blob.len(), NONCE_LEN + TAG_LEN, "empty seal must be 28 bytes");
+    assert_eq!(
+        blob.len(),
+        NONCE_LEN + TAG_LEN,
+        "empty seal must be 28 bytes"
+    );
     assert_eq!(unseal(&blob, "test:empty", &p).expect("unseal"), b"");
 }
 
@@ -147,7 +151,11 @@ fn tc_seal_009_nonce_is_unique_per_seal() {
     let before = nonces.len();
     nonces.sort_unstable();
     nonces.dedup();
-    assert_eq!(before, nonces.len(), "AES-GCM nonce reuse detected under a fixed key");
+    assert_eq!(
+        before,
+        nonces.len(),
+        "AES-GCM nonce reuse detected under a fixed key"
+    );
 }
 
 /// TC-SEAL-010 — the simulation master key file must not be world-readable.

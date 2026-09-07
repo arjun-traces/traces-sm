@@ -1,4 +1,4 @@
-﻿# `traces-sm` — Windows Desktop Application Build Guide
+# `traces-sm` — Windows Desktop Application Build Guide
 
 This guide provides step-by-step instructions to build, run, and package the **`traces-sm-desktop`** native desktop application on **Windows 10 / Windows 11**.
 

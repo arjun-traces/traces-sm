@@ -1,5 +1,5 @@
-﻿use criterion::{criterion_group, criterion_main, Criterion, BlackBox};
-use traces_sm_enclave::sealing::{SimSealingProvider, seal_data, unseal_data};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use traces_sm_enclave::sealing::{seal_data, unseal_data, SimSealingProvider};
 
 fn bench_secret_sealing(c: &mut Criterion) {
     let provider = SimSealingProvider::new("/tmp/sm-store-bench");
@@ -8,7 +8,7 @@ fn bench_secret_sealing(c: &mut Criterion) {
 
     c.bench_function("aes_256_gcm_envelope_seal_256b", |b| {
         b.iter(|| {
-            seal_data(BlackBox(&secret), BlackBox(purpose), &provider).unwrap();
+            seal_data(black_box(&secret), black_box(purpose), &provider).unwrap();
         })
     });
 
@@ -16,7 +16,7 @@ fn bench_secret_sealing(c: &mut Criterion) {
 
     c.bench_function("aes_256_gcm_envelope_unseal_256b", |b| {
         b.iter(|| {
-            unseal_data(BlackBox(&sealed_blob), BlackBox(purpose), &provider).unwrap();
+            unseal_data(black_box(&sealed_blob), black_box(purpose), &provider).unwrap();
         })
     });
 }

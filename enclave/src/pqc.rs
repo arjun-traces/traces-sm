@@ -85,17 +85,45 @@ mod tests {
 
     #[test]
     fn test_pqc_functions_return_not_implemented() {
-        assert!(matches!(generate_ml_kem_768_keypair(), Err(EnclaveError::NotImplemented(_))));
-        assert!(matches!(generate_ml_kem_1024_keypair(), Err(EnclaveError::NotImplemented(_))));
-        assert!(matches!(ml_kem_encapsulate(&[]), Err(EnclaveError::NotImplemented(_))));
-        assert!(matches!(ml_kem_decapsulate(&[], &[]), Err(EnclaveError::NotImplemented(_))));
-        assert!(matches!(generate_ml_dsa_3_keypair(), Err(EnclaveError::NotImplemented(_))));
-        assert!(matches!(generate_ml_dsa_5_keypair(), Err(EnclaveError::NotImplemented(_))));
-        assert!(matches!(generate_ml_dsa_87_keypair(), Err(EnclaveError::NotImplemented(_))));
-        assert!(matches!(ml_dsa_sign(&[], &[]), Err(EnclaveError::NotImplemented(_))));
-        assert!(matches!(ml_dsa_verify(&[], &[], &[]), Err(EnclaveError::NotImplemented(_))));
-        assert!(matches!(ml_dsa_87_verify(&[], &[], &[]), Err(EnclaveError::NotImplemented(_))));
+        assert!(matches!(
+            generate_ml_kem_768_keypair(),
+            Err(EnclaveError::NotImplemented(_))
+        ));
+        assert!(matches!(
+            generate_ml_kem_1024_keypair(),
+            Err(EnclaveError::NotImplemented(_))
+        ));
+        assert!(matches!(
+            ml_kem_encapsulate(&[]),
+            Err(EnclaveError::NotImplemented(_))
+        ));
+        assert!(matches!(
+            ml_kem_decapsulate(&[], &[]),
+            Err(EnclaveError::NotImplemented(_))
+        ));
+        assert!(matches!(
+            generate_ml_dsa_3_keypair(),
+            Err(EnclaveError::NotImplemented(_))
+        ));
+        assert!(matches!(
+            generate_ml_dsa_5_keypair(),
+            Err(EnclaveError::NotImplemented(_))
+        ));
+        assert!(matches!(
+            generate_ml_dsa_87_keypair(),
+            Err(EnclaveError::NotImplemented(_))
+        ));
+        assert!(matches!(
+            ml_dsa_sign(&[], &[]),
+            Err(EnclaveError::NotImplemented(_))
+        ));
+        assert!(matches!(
+            ml_dsa_verify(&[], &[], &[]),
+            Err(EnclaveError::NotImplemented(_))
+        ));
+        assert!(matches!(
+            ml_dsa_87_verify(&[], &[], &[]),
+            Err(EnclaveError::NotImplemented(_))
+        ));
     }
 }
-
-

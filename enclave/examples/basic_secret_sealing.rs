@@ -1,6 +1,6 @@
-﻿//! Example: Sealing and unsealing a secret inside traces-sm enclave memory.
+//! Example: Sealing and unsealing a secret inside traces-sm enclave memory.
 
-use traces_sm_enclave::sealing::{SimSealingProvider, seal_data, unseal_data};
+use traces_sm_enclave::sealing::{seal_data, unseal_data, SimSealingProvider};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== traces-sm Secret Sealing Example ===");
@@ -10,7 +10,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let secret_payload = b"super-secret-database-password-2026";
     let purpose = "seal:secrets";
 
-    println!("Plaintext Payload: {}", String::from_utf8_lossy(secret_payload));
+    println!(
+        "Plaintext Payload: {}",
+        String::from_utf8_lossy(secret_payload)
+    );
 
     // Seal secret using HKDF-SHA256 + AES-256-GCM
     let sealed_blob = seal_data(secret_payload, purpose, &provider)?;
@@ -18,7 +21,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Unseal secret inside enclave memory
     let unsealed_bytes = unseal_data(&sealed_blob, purpose, &provider)?;
-    println!("Unsealed Payload: {}", String::from_utf8_lossy(&unsealed_bytes));
+    println!(
+        "Unsealed Payload: {}",
+        String::from_utf8_lossy(&unsealed_bytes)
+    );
 
     assert_eq!(secret_payload, unsealed_bytes.as_slice());
     println!("✓ Sealing and Unsealing verification successful!");

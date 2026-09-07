@@ -1,17 +1,19 @@
 use crate::error::EnclaveError;
-use crate::models::{ApiResponse, TransitionStateRequest, CryptoShredRequest, EntropyStatusResponse};
-use crate::store::Store;
+use crate::models::{
+    ApiResponse, CryptoShredRequest, EntropyStatusResponse, TransitionStateRequest,
+};
 use crate::nist::KeyLifecycleState;
-use uuid::Uuid;
+use crate::store::Store;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub fn handle_transition_state(
     store: Arc<Store>,
     id: Uuid,
-    req: TransitionStateRequest,
+    _req: TransitionStateRequest,
 ) -> Result<ApiResponse<()>, EnclaveError> {
-    let mut record = store.load_meta(&id)?;
-    // In a full implementation, we'd transition `record.lifecycle_state` if it was mapped, 
+    let record = store.load_meta(&id)?;
+    // In a full implementation, we'd transition `record.lifecycle_state` if it was mapped,
     // but the record might not have it yet unless we updated SecretRecord in store.rs.
     // For now, we simulate success for the handler.
     store.save_meta(&record)?;

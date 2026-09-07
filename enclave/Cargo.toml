@@ -26,11 +26,15 @@ rsa           = { version = "0.9", features = ["sha2", "pem"] }
 # ---------------------------------------------------------------------------
 # ZKP — Schnorr / Pedersen / Bulletproofs  (dalek ecosystem)
 # ---------------------------------------------------------------------------
-curve25519-dalek  = { version = "4", default-features = false, features = ["alloc", "rand_core", "digest"] }
-schnorrkel        = { version = "0.11", default-features = false, features = ["std", "preaudit_deprecated"] }
-bulletproofs      = { version = "4", default-features = false, features = ["std"] }
-merlin            = { version = "3", default-features = false, features = ["std"] }
-frost-ed25519     = "2.0.0"
+curve25519-dalek     = { version = "4", default-features = false, features = ["alloc", "rand_core", "digest"] }
+curve25519-dalek-ng  = "4.1"
+schnorrkel           = { version = "0.11", default-features = false, features = ["std", "preaudit_deprecated"] }
+
+
+bulletproofs         = { version = "4", default-features = false, features = ["std"] }
+merlin               = { version = "3", default-features = false, features = ["std"] }
+frost-ed25519        = "2.0.0"
+
 
 # ---------------------------------------------------------------------------
 # ZK-SNARKs (arkworks)
@@ -86,13 +90,13 @@ default = []
 # Enable real SGX hardware sealing via EGETKEY
 sgx-hw = ["sgx-isa"]
 
-[profile.release]
-opt-level  = 3
-lto        = "thin"
-panic      = "abort"
-strip      = "debuginfo"
+[dev-dependencies]
+criterion = "0.5"
 
-[profile.dev]
-panic = "abort"
+[[bench]]
+name = "sealing_bench"
+harness = false
+
+
 
 

@@ -1,5 +1,4 @@
-use axum::{routing::{get, post}, Router};
+use axum::{routing::get, Router};
 pub fn router() -> Router {
-    Router::new()
-        .route("/", get(|| async { "Get attestation" }))
+    Router::new().route("/", get(|| async { "Get attestation" }))
 }

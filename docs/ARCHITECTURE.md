@@ -1,4 +1,4 @@
-﻿# `traces-sm` — 100% Rust-Native Architecture Walkthrough
+# `traces-sm` — 100% Rust-Native Architecture Walkthrough
 
 ## 1. Architectural Principles & Overview
 

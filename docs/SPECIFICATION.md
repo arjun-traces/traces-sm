@@ -1,4 +1,4 @@
-﻿# `traces-sm` — Technical Specification Document (10-Page Engineering Spec)
+# `traces-sm` — Technical Specification Document (10-Page Engineering Spec)
 ## 100% Rust-Native Multi-OS NIST SP 800-57 SGX Secrets & Key Management Framework
 
 ---

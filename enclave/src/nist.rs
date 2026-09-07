@@ -11,6 +11,34 @@ pub enum KeyLifecycleState {
     Destroyed,
 }
 
+impl KeyLifecycleState {
+    pub fn can_encrypt(&self) -> bool {
+        matches!(self, KeyLifecycleState::Operational)
+    }
+
+    pub fn can_decrypt_historical(&self) -> bool {
+        matches!(
+            self,
+            KeyLifecycleState::Operational | KeyLifecycleState::Deactivated
+        )
+    }
+
+    pub fn can_sign(&self) -> bool {
+        matches!(self, KeyLifecycleState::Operational)
+    }
+
+    pub fn can_verify(&self) -> bool {
+        matches!(
+            self,
+            KeyLifecycleState::Operational | KeyLifecycleState::Deactivated
+        )
+    }
+
+    pub fn is_active(&self) -> bool {
+        matches!(self, KeyLifecycleState::Operational)
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct KeyUsage {
     pub sign: bool,
@@ -36,14 +64,13 @@ impl Default for KeyUsage {
     }
 }
 
-use zeroize::Zeroizing;
-
+pub use zeroize::Zeroizing;
 
 pub fn sp800_108_kdf(ki: &[u8], label: &[u8], context: &[u8], l: usize) -> Zeroizing<Vec<u8>> {
     let key = hmac::Key::new(hmac::HMAC_SHA256, ki);
     let mut okm = Vec::with_capacity(l);
     let mut counter = 1u32;
-    
+
     while okm.len() < l {
         let mut ctx = hmac::Context::with_key(&key);
         ctx.update(&counter.to_be_bytes());
@@ -51,7 +78,7 @@ pub fn sp800_108_kdf(ki: &[u8], label: &[u8], context: &[u8], l: usize) -> Zeroi
         ctx.update(&[0x00]);
         ctx.update(context);
         ctx.update(&(l as u32 * 8).to_be_bytes());
-        
+
         let tag = ctx.sign();
         let chunk = tag.as_ref();
         let to_copy = std::cmp::min(chunk.len(), l - okm.len());

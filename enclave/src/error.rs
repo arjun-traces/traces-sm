@@ -148,9 +148,7 @@ impl From<std::io::Error> for EnclaveError {
 pub fn http_status(e: &EnclaveError) -> u16 {
     match e {
         EnclaveError::NotFound { .. } => 404,
-        EnclaveError::Unauthorized
-        | EnclaveError::TokenExpired
-        | EnclaveError::TokenRevoked => 401,
+        EnclaveError::Unauthorized | EnclaveError::TokenExpired | EnclaveError::TokenRevoked => 401,
         EnclaveError::InsufficientScope { .. } => 403,
         EnclaveError::BadRequest(_) => 400,
         EnclaveError::NotImplemented(_) => 501,

@@ -1,4 +1,4 @@
-﻿//! Paillier Partially Homomorphic Encryption (PHE).
+//! Paillier Partially Homomorphic Encryption (PHE).
 //!
 //! Paillier is an *additively homomorphic* public-key cryptosystem:
 //!
@@ -88,15 +88,18 @@ impl PaillierPrivateKeySerial {
                 .map_err(|_| EnclaveError::HeKeyGen("bad lambda hex".into()))?,
         );
         let mu = BigUint::from_bytes_be(
-            &hex::decode(&self.mu_hex)
-                .map_err(|_| EnclaveError::HeKeyGen("bad mu hex".into()))?,
+            &hex::decode(&self.mu_hex).map_err(|_| EnclaveError::HeKeyGen("bad mu hex".into()))?,
         );
         let n = BigUint::from_bytes_be(
-            &hex::decode(&self.n_hex)
-                .map_err(|_| EnclaveError::HeKeyGen("bad n hex".into()))?,
+            &hex::decode(&self.n_hex).map_err(|_| EnclaveError::HeKeyGen("bad n hex".into()))?,
         );
         let n_sq = &n * &n;
-        Ok(PaillierPrivateKey { lambda, mu, n, n_sq })
+        Ok(PaillierPrivateKey {
+            lambda,
+            mu,
+            n,
+            n_sq,
+        })
     }
 }
 
@@ -249,8 +252,17 @@ pub fn generate_keypair(bits: usize) -> Result<PaillierKeyPair, EnclaveError> {
         .ok_or_else(|| EnclaveError::HeKeyGen("λ not invertible mod n".into()))?;
 
     Ok(PaillierKeyPair {
-        public: PaillierPublicKey { n: n.clone(), g, n_sq: n_sq.clone() },
-        private: PaillierPrivateKey { lambda, mu, n, n_sq },
+        public: PaillierPublicKey {
+            n: n.clone(),
+            g,
+            n_sq: n_sq.clone(),
+        },
+        private: PaillierPrivateKey {
+            lambda,
+            mu,
+            n,
+            n_sq,
+        },
     })
 }
 
@@ -307,11 +319,7 @@ pub fn add_ciphertexts(pk: &PaillierPublicKey, c1: &BigUint, c2: &BigUint) -> Bi
 }
 
 /// Homomorphic scalar multiplication:  Enc(k · m) = Enc(m)^k  mod n²
-pub fn multiply_ciphertext_by_scalar(
-    pk: &PaillierPublicKey,
-    c: &BigUint,
-    k: &BigUint,
-) -> BigUint {
+pub fn multiply_ciphertext_by_scalar(pk: &PaillierPublicKey, c: &BigUint, k: &BigUint) -> BigUint {
     c.modpow(k, &pk.n_sq)
 }
 

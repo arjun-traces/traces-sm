@@ -1,4 +1,4 @@
-﻿//! Example: NIST SP 800-57 Key Lifecycle state transitions.
+//! Example: NIST SP 800-57 Key Lifecycle state transitions.
 
 use traces_sm_enclave::nist::{KeyLifecycleState, KeyUsage};
 

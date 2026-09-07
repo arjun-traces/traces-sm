@@ -120,9 +120,18 @@ fn tc_dkg_004_share_count_above_255_is_refused() {
 #[test]
 fn tc_dkg_005_ragged_shares_do_not_panic() {
     let shares = vec![
-        KeyShare { x: 1, y: vec![0xAA; 32] },
-        KeyShare { x: 2, y: vec![0xBB; 4] }, // hostile: short
-        KeyShare { x: 3, y: vec![0xCC; 32] },
+        KeyShare {
+            x: 1,
+            y: vec![0xAA; 32],
+        },
+        KeyShare {
+            x: 2,
+            y: vec![0xBB; 4],
+        }, // hostile: short
+        KeyShare {
+            x: 3,
+            y: vec![0xCC; 32],
+        },
     ];
     let result = std::panic::catch_unwind(|| reconstruct_secret_bytes(&shares, 3));
     assert!(
@@ -145,7 +154,10 @@ fn tc_dkg_006_single_byte_roundtrip() {
 fn tc_dkg_007_degenerate_parameters_are_handled() {
     assert!(split_secret_bytes(b"", 2, 3).is_empty(), "empty secret");
     assert!(split_secret_bytes(b"x", 0, 3).is_empty(), "zero threshold");
-    assert!(split_secret_bytes(b"x", 4, 3).is_empty(), "threshold > total");
+    assert!(
+        split_secret_bytes(b"x", 4, 3).is_empty(),
+        "threshold > total"
+    );
 }
 
 /// TC-DKG-008 — share randomness must come from the SP 800-90A DRBG.
@@ -180,7 +192,11 @@ fn tc_vss_001_honest_shares_verify() {
     assert_eq!(shares.len(), 5);
     assert_eq!(commitment.coefficient_commitments.len(), 3);
     for s in &shares {
-        assert!(verify_vss_commitment(s, &commitment), "honest share x={} failed", s.x);
+        assert!(
+            verify_vss_commitment(s, &commitment),
+            "honest share x={} failed",
+            s.x
+        );
     }
 }
 

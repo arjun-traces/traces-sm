@@ -1,6 +1,6 @@
+use once_cell::sync::Lazy;
 use rusqlite::{Connection, Result};
 use std::sync::Mutex;
-use once_cell::sync::Lazy;
 
 pub static DB_CONN: Lazy<Mutex<Connection>> = Lazy::new(|| {
     let conn = Connection::open("metadata.db").expect("Failed to open DB");
@@ -9,8 +9,9 @@ pub static DB_CONN: Lazy<Mutex<Connection>> = Lazy::new(|| {
         "PRAGMA journal_mode = WAL;
          PRAGMA busy_timeout = 5000;
          PRAGMA synchronous = NORMAL;
-         PRAGMA foreign_keys = ON;"
-    ).expect("Failed to apply SQLite PRAGMAs");
+         PRAGMA foreign_keys = ON;",
+    )
+    .expect("Failed to apply SQLite PRAGMAs");
     Mutex::new(conn)
 });
 
@@ -20,9 +21,9 @@ pub fn init_db() -> Result<()> {
     let _ = conn.execute_batch(
         "PRAGMA journal_mode = WAL;
          PRAGMA busy_timeout = 5000;
-         PRAGMA synchronous = NORMAL;"
+         PRAGMA synchronous = NORMAL;",
     );
-    
+
     conn.execute(
         "CREATE TABLE IF NOT EXISTS secrets_metadata (
             id TEXT PRIMARY KEY,
@@ -31,7 +32,7 @@ pub fn init_db() -> Result<()> {
         )",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE TABLE IF NOT EXISTS audit_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

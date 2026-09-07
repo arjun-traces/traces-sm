@@ -1,4 +1,4 @@
-﻿[workspace]
+[workspace]
 members = [
     "enclave",
     "host",
@@ -7,3 +7,13 @@ members = [
     "desktop",
 ]
 resolver = "2"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+panic = "abort"
+strip = "debuginfo"
+
+[profile.dev]
+panic = "abort"
+

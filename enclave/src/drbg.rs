@@ -42,7 +42,8 @@ impl HmacDrbg {
     fn get_entropy(len: usize) -> Vec<u8> {
         let mut buf = vec![0u8; len];
         let rng = ring::rand::SystemRandom::new();
-        rng.fill(&mut buf).expect("Secure entropy generation failed");
+        rng.fill(&mut buf)
+            .expect("Secure entropy generation failed");
         buf
     }
 
@@ -82,12 +83,12 @@ impl HmacDrbg {
             let mut ctx = hmac::Context::with_key(&self.key);
             ctx.update(&self.v);
             self.v = ctx.sign().as_ref().to_vec();
-            
+
             let to_copy = std::cmp::min(self.v.len(), out.len() - generated);
             out[generated..generated + to_copy].copy_from_slice(&self.v[..to_copy]);
             generated += to_copy;
         }
-        
+
         self.update(&[]);
         self.reseed_counter += 1;
 

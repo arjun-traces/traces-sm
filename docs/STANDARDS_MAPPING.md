@@ -1,4 +1,4 @@
-﻿# NIST SP 800-57 & FIPS 140-3 Standards Mapping
+# NIST SP 800-57 & FIPS 140-3 Standards Mapping
 
 This document provides a line-item status mapping of `traces-sm` against National Institute of Standards and Technology (NIST) guidelines.
 

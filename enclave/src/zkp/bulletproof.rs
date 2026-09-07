@@ -18,8 +18,8 @@
 //! we prove  0 ≤ (v - min) < 2^n  where  2^n > (max - min).
 
 use bulletproofs::{BulletproofGens, PedersenGens, RangeProof};
-use curve25519_dalek::ristretto::CompressedRistretto;
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::ristretto::CompressedRistretto;
+use curve25519_dalek_ng::scalar::Scalar;
 use merlin::Transcript;
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
@@ -57,15 +57,11 @@ pub struct SerializedRangeProof {
 ///
 /// Returns a `SerializedRangeProof` that can be sent to an untrusted verifier
 /// without revealing `value`.
-pub fn prove_range(
-    value: u64,
-    min: u64,
-    max: u64,
-) -> Result<SerializedRangeProof, EnclaveError> {
+pub fn prove_range(value: u64, min: u64, max: u64) -> Result<SerializedRangeProof, EnclaveError> {
     if value < min || value > max {
-        return Err(EnclaveError::ZkpInvalidInput(
-            format!("value {value} is not in [{min}, {max}]"),
-        ));
+        return Err(EnclaveError::ZkpInvalidInput(format!(
+            "value {value} is not in [{min}, {max}]"
+        )));
     }
     if max < min {
         return Err(EnclaveError::ZkpInvalidInput("max must be ≥ min".into()));

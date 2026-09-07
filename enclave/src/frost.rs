@@ -3,14 +3,14 @@
 //! Provides threshold DKG key generation (trusted dealer), Round 1 nonces/commitments,
 //! Round 2 signing share production, threshold signature aggregation, and verification.
 
-use std::collections::BTreeMap;
-use frost_ed25519 as frost;
-use frost::keys::{KeyPackage, PublicKeyPackage, SecretShare, IdentifierList};
+use frost::keys::{IdentifierList, KeyPackage, PublicKeyPackage, SecretShare};
 use frost::round1::{SigningCommitments, SigningNonces};
 use frost::round2::SignatureShare;
 use frost::{Identifier, Signature, SigningPackage};
+use frost_ed25519 as frost;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use crate::error::EnclaveError;
 
@@ -60,20 +60,25 @@ pub fn generate_dealer_keys(
 
     let mut key_packages = BTreeMap::new();
     for (id, share) in shares {
-        let key_package = KeyPackage::try_from(share)
-            .map_err(|e| EnclaveError::DkgInvalidInput(format!("KeyPackage conversion error: {:?}", e)))?;
-        let id_str = serde_json::to_string(&id)
-            .map_err(|e| EnclaveError::DkgInvalidInput(format!("Identifier serialize error: {}", e)))?;
-        let package_json = serde_json::to_string(&key_package)
-            .map_err(|e| EnclaveError::DkgInvalidInput(format!("KeyPackage serialize error: {}", e)))?;
+        let key_package = KeyPackage::try_from(share).map_err(|e| {
+            EnclaveError::DkgInvalidInput(format!("KeyPackage conversion error: {:?}", e))
+        })?;
+        let id_str = serde_json::to_string(&id).map_err(|e| {
+            EnclaveError::DkgInvalidInput(format!("Identifier serialize error: {}", e))
+        })?;
+        let package_json = serde_json::to_string(&key_package).map_err(|e| {
+            EnclaveError::DkgInvalidInput(format!("KeyPackage serialize error: {}", e))
+        })?;
         key_packages.insert(id_str, package_json);
     }
 
-    let pubkey_package_json = serde_json::to_string(&pubkey_package)
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("PublicKeyPackage serialize error: {}", e)))?;
+    let pubkey_package_json = serde_json::to_string(&pubkey_package).map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("PublicKeyPackage serialize error: {}", e))
+    })?;
 
-    let group_pubkey_bytes = pubkey_package.verifying_key().serialize()
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("VerifyingKey serialize error: {:?}", e)))?;
+    let group_pubkey_bytes = pubkey_package.verifying_key().serialize().map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("VerifyingKey serialize error: {:?}", e))
+    })?;
     let group_public_key_hex = hex::encode(group_pubkey_bytes);
 
     Ok(FrostKeyGenOutput {
@@ -86,19 +91,20 @@ pub fn generate_dealer_keys(
 }
 
 /// Round 1: Generate nonces and public commitments for a participant.
-pub fn round1_commit(
-    key_package_json: &str,
-) -> Result<FrostRound1Output, EnclaveError> {
-    let key_package: KeyPackage = serde_json::from_str(key_package_json)
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("KeyPackage deserialize error: {}", e)))?;
+pub fn round1_commit(key_package_json: &str) -> Result<FrostRound1Output, EnclaveError> {
+    let key_package: KeyPackage = serde_json::from_str(key_package_json).map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("KeyPackage deserialize error: {}", e))
+    })?;
 
     let mut rng = thread_rng();
     let (nonces, commitments) = frost::round1::commit(key_package.signing_share(), &mut rng);
 
-    let nonces_json = serde_json::to_string(&nonces)
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("SigningNonces serialize error: {}", e)))?;
-    let commitments_json = serde_json::to_string(&commitments)
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("SigningCommitments serialize error: {}", e)))?;
+    let nonces_json = serde_json::to_string(&nonces).map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("SigningNonces serialize error: {}", e))
+    })?;
+    let commitments_json = serde_json::to_string(&commitments).map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("SigningCommitments serialize error: {}", e))
+    })?;
 
     Ok(FrostRound1Output {
         nonces_json,
@@ -113,17 +119,21 @@ pub fn round2_sign_share(
     commitments_map_json: &BTreeMap<String, String>,
     message: &[u8],
 ) -> Result<String, EnclaveError> {
-    let key_package: KeyPackage = serde_json::from_str(key_package_json)
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("KeyPackage deserialize error: {}", e)))?;
-    let nonces: SigningNonces = serde_json::from_str(nonces_json)
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("SigningNonces deserialize error: {}", e)))?;
+    let key_package: KeyPackage = serde_json::from_str(key_package_json).map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("KeyPackage deserialize error: {}", e))
+    })?;
+    let nonces: SigningNonces = serde_json::from_str(nonces_json).map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("SigningNonces deserialize error: {}", e))
+    })?;
 
     let mut commitments_map: BTreeMap<Identifier, SigningCommitments> = BTreeMap::new();
     for (id_str, comm_json) in commitments_map_json {
-        let id: Identifier = serde_json::from_str(id_str)
-            .map_err(|e| EnclaveError::DkgInvalidInput(format!("Identifier deserialize error: {}", e)))?;
-        let comm: SigningCommitments = serde_json::from_str(comm_json)
-            .map_err(|e| EnclaveError::DkgInvalidInput(format!("SigningCommitments deserialize error: {}", e)))?;
+        let id: Identifier = serde_json::from_str(id_str).map_err(|e| {
+            EnclaveError::DkgInvalidInput(format!("Identifier deserialize error: {}", e))
+        })?;
+        let comm: SigningCommitments = serde_json::from_str(comm_json).map_err(|e| {
+            EnclaveError::DkgInvalidInput(format!("SigningCommitments deserialize error: {}", e))
+        })?;
         commitments_map.insert(id, comm);
     }
 
@@ -132,8 +142,9 @@ pub fn round2_sign_share(
     let signature_share = frost::round2::sign(&signing_package, &nonces, &key_package)
         .map_err(|e| EnclaveError::DkgInvalidInput(format!("FROST round2 sign error: {:?}", e)))?;
 
-    let share_json = serde_json::to_string(&signature_share)
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("SignatureShare serialize error: {}", e)))?;
+    let share_json = serde_json::to_string(&signature_share).map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("SignatureShare serialize error: {}", e))
+    })?;
 
     Ok(share_json)
 }
@@ -145,24 +156,30 @@ pub fn aggregate_signature(
     signature_shares_json: &BTreeMap<String, String>,
     message: &[u8],
 ) -> Result<String, EnclaveError> {
-    let pubkey_package: PublicKeyPackage = serde_json::from_str(public_key_package_json)
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("PublicKeyPackage deserialize error: {}", e)))?;
+    let pubkey_package: PublicKeyPackage =
+        serde_json::from_str(public_key_package_json).map_err(|e| {
+            EnclaveError::DkgInvalidInput(format!("PublicKeyPackage deserialize error: {}", e))
+        })?;
 
     let mut commitments_map: BTreeMap<Identifier, SigningCommitments> = BTreeMap::new();
     for (id_str, comm_json) in commitments_map_json {
-        let id: Identifier = serde_json::from_str(id_str)
-            .map_err(|e| EnclaveError::DkgInvalidInput(format!("Identifier deserialize error: {}", e)))?;
-        let comm: SigningCommitments = serde_json::from_str(comm_json)
-            .map_err(|e| EnclaveError::DkgInvalidInput(format!("SigningCommitments deserialize error: {}", e)))?;
+        let id: Identifier = serde_json::from_str(id_str).map_err(|e| {
+            EnclaveError::DkgInvalidInput(format!("Identifier deserialize error: {}", e))
+        })?;
+        let comm: SigningCommitments = serde_json::from_str(comm_json).map_err(|e| {
+            EnclaveError::DkgInvalidInput(format!("SigningCommitments deserialize error: {}", e))
+        })?;
         commitments_map.insert(id, comm);
     }
 
     let mut signature_shares: BTreeMap<Identifier, SignatureShare> = BTreeMap::new();
     for (id_str, share_json) in signature_shares_json {
-        let id: Identifier = serde_json::from_str(id_str)
-            .map_err(|e| EnclaveError::DkgInvalidInput(format!("Identifier deserialize error: {}", e)))?;
-        let share: SignatureShare = serde_json::from_str(share_json)
-            .map_err(|e| EnclaveError::DkgInvalidInput(format!("SignatureShare deserialize error: {}", e)))?;
+        let id: Identifier = serde_json::from_str(id_str).map_err(|e| {
+            EnclaveError::DkgInvalidInput(format!("Identifier deserialize error: {}", e))
+        })?;
+        let share: SignatureShare = serde_json::from_str(share_json).map_err(|e| {
+            EnclaveError::DkgInvalidInput(format!("SignatureShare deserialize error: {}", e))
+        })?;
         signature_shares.insert(id, share);
     }
 
@@ -171,8 +188,9 @@ pub fn aggregate_signature(
     let signature = frost::aggregate(&signing_package, &signature_shares, &pubkey_package)
         .map_err(|e| EnclaveError::DkgInvalidInput(format!("FROST aggregate error: {:?}", e)))?;
 
-    let sig_bytes = signature.serialize()
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("Signature serialize error: {:?}", e)))?;
+    let sig_bytes = signature.serialize().map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("Signature serialize error: {:?}", e))
+    })?;
     Ok(hex::encode(sig_bytes))
 }
 
@@ -184,16 +202,19 @@ pub fn verify_signature(
 ) -> Result<bool, EnclaveError> {
     let pubkey_bytes = hex::decode(group_public_key_hex)
         .map_err(|e| EnclaveError::DkgInvalidInput(format!("Invalid public key hex: {}", e)))?;
-    let pubkey_array: [u8; 32] = pubkey_bytes.try_into()
+    let pubkey_array: [u8; 32] = pubkey_bytes
+        .try_into()
         .map_err(|_| EnclaveError::DkgInvalidInput("Public key must be 32 bytes".into()))?;
 
-    let verifying_key = frost::VerifyingKey::deserialize(&pubkey_array)
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("VerifyingKey deserialize error: {:?}", e)))?;
+    let verifying_key = frost::VerifyingKey::deserialize(&pubkey_array).map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("VerifyingKey deserialize error: {:?}", e))
+    })?;
 
     let sig_bytes = hex::decode(signature_hex)
         .map_err(|e| EnclaveError::DkgInvalidInput(format!("Invalid signature hex: {}", e)))?;
-    let signature = Signature::deserialize(&sig_bytes)
-        .map_err(|e| EnclaveError::DkgInvalidInput(format!("Signature deserialize error: {:?}", e)))?;
+    let signature = Signature::deserialize(&sig_bytes).map_err(|e| {
+        EnclaveError::DkgInvalidInput(format!("Signature deserialize error: {:?}", e))
+    })?;
 
     match verifying_key.verify(message, &signature) {
         Ok(()) => Ok(true),
@@ -230,8 +251,20 @@ mod tests {
 
         // 3. Round 2: Sign shares
         let message = b"Secrets-Manager FROST Threshold Signature Test Message";
-        let share1 = round2_sign_share(&pkg1_json, &round1_p1.nonces_json, &commitments_map, message).unwrap();
-        let share2 = round2_sign_share(&pkg2_json, &round1_p2.nonces_json, &commitments_map, message).unwrap();
+        let share1 = round2_sign_share(
+            &pkg1_json,
+            &round1_p1.nonces_json,
+            &commitments_map,
+            message,
+        )
+        .unwrap();
+        let share2 = round2_sign_share(
+            &pkg2_json,
+            &round1_p2.nonces_json,
+            &commitments_map,
+            message,
+        )
+        .unwrap();
 
         let mut shares_map = BTreeMap::new();
         shares_map.insert(id1_str, share1);
@@ -247,7 +280,8 @@ mod tests {
         .unwrap();
 
         // 5. Verify signature
-        let is_valid = verify_signature(&keygen_output.group_public_key_hex, &sig_hex, message).unwrap();
+        let is_valid =
+            verify_signature(&keygen_output.group_public_key_hex, &sig_hex, message).unwrap();
         assert!(is_valid, "FROST threshold signature verification failed");
     }
 
@@ -261,11 +295,16 @@ mod tests {
 
         // Extract and verify secret share buffer zeroization
         let mut secret_bytes = pkg_json.into_bytes();
-        assert!(!secret_bytes.iter().all(|&b| b == 0), "Secret buffer should initially contain key bytes");
+        assert!(
+            !secret_bytes.iter().all(|&b| b == 0),
+            "Secret buffer should initially contain key bytes"
+        );
 
         // Perform zeroize
         secret_bytes.zeroize();
-        assert!(secret_bytes.iter().all(|&b| b == 0), "Secret buffer must be completely zeroized");
+        assert!(
+            secret_bytes.iter().all(|&b| b == 0),
+            "Secret buffer must be completely zeroized"
+        );
     }
 }
-

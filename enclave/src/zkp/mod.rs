@@ -1,5 +1,5 @@
-﻿//! ZKP module — re-exports all proof systems.
+//! ZKP module — re-exports all proof systems.
 
-pub mod schnorr;
-pub mod pedersen;
 pub mod bulletproof;
+pub mod pedersen;
+pub mod schnorr;

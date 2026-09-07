@@ -1,4 +1,4 @@
-﻿# Technical Comparison: `traces-sm` vs Cloud Vaults & HSMs
+# Technical Comparison: `traces-sm` vs Cloud Vaults & HSMs
 
 This document presents a technical comparison between **`traces-sm`**, traditional cloud vaults (HashiCorp Vault, OpenBao), commercial TEE solutions (Fortanix DSM), and cloud HSMs (AWS CloudHSM).
 

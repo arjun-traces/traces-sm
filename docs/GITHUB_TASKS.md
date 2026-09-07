@@ -1,4 +1,4 @@
-﻿# `traces-sm` — GitHub Deployment & Operations Task List
+# `traces-sm` — GitHub Deployment & Operations Task List
 
 > All documentation, landing pages, technical specifications, build guides, and community guidelines are maintained directly on GitHub via **GitHub Pages**, **GitHub Wiki**, and **GitHub Actions**.
 

@@ -1,4 +1,4 @@
-﻿# `traces-sm` CLI Reference
+# `traces-sm` CLI Reference
 
 The `traces-sm` CLI is a multi-OS command-line interface for managing SGX enclave secrets, NIST key lifecycles, Post-Quantum keys, DKG threshold nodes, and SP 800-90B DRBG health.
 

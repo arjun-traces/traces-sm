@@ -80,14 +80,30 @@ fn tc_zkp_007_malformed_input_is_rejected() {
     let good_c = generate_commitment(SECRET).expect("commit");
     let good_p = prove_knowledge(SECRET, NONCE).expect("prove");
 
-    let bad_c = SchnorrCommitment { point_hex: "zzzz".into() };
-    assert!(verify_proof(&bad_c, &good_p, NONCE).is_err(), "bad commitment hex");
+    let bad_c = SchnorrCommitment {
+        point_hex: "zzzz".into(),
+    };
+    assert!(
+        verify_proof(&bad_c, &good_p, NONCE).is_err(),
+        "bad commitment hex"
+    );
 
-    let short_c = SchnorrCommitment { point_hex: "aabb".into() };
-    assert!(verify_proof(&short_c, &good_p, NONCE).is_err(), "short commitment");
+    let short_c = SchnorrCommitment {
+        point_hex: "aabb".into(),
+    };
+    assert!(
+        verify_proof(&short_c, &good_p, NONCE).is_err(),
+        "short commitment"
+    );
 
-    let bad_p = SchnorrProof { signature_hex: "zzzz".into(), context: good_p.context.clone() };
-    assert!(verify_proof(&good_c, &bad_p, NONCE).is_err(), "bad proof hex");
+    let bad_p = SchnorrProof {
+        signature_hex: "zzzz".into(),
+        context: good_p.context.clone(),
+    };
+    assert!(
+        verify_proof(&good_c, &bad_p, NONCE).is_err(),
+        "bad proof hex"
+    );
 }
 
 /// TC-ZKP-008 — replay protection must be enforced by the enclave.
@@ -122,7 +138,10 @@ fn tc_bp_001_in_range_value_verifies() {
 fn tc_bp_002_boundaries_are_inclusive() {
     for v in [100u64, 1000u64] {
         let p = prove_range(v, 100, 1000).expect("prove boundary {v}");
-        assert!(verify_range_proof(&p).expect("verify"), "boundary {v} failed");
+        assert!(
+            verify_range_proof(&p).expect("verify"),
+            "boundary {v} failed"
+        );
     }
 }
 
@@ -170,8 +189,8 @@ fn tc_bp_005_upper_bound_is_enforced() {
     let cheating_value = 4_000_000_000u64;
 
     // The prover proves against a range wide enough to accept it...
-    let mut proof = prove_range(cheating_value, policy_min, u64::from(u32::MAX))
-        .expect("wide-range prove");
+    let mut proof =
+        prove_range(cheating_value, policy_min, u64::from(u32::MAX)).expect("wide-range prove");
 
     // ...then relabels the public bounds to the narrow policy window.
     proof.max = policy_max;

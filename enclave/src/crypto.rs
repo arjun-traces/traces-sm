@@ -1,4 +1,4 @@
-﻿//! Envelope encryption helpers.
+//! Envelope encryption helpers.
 //!
 //! Each secret gets its own random 256-bit DEK.
 //! That DEK is sealed (AES-256-GCM) using the master sealing key
@@ -11,8 +11,9 @@
 //!
 //! The separator is a fixed marker to make parsing unambiguous.
 
-use ring::aead::{Aad, BoundKey, Nonce, NonceSequence, OpeningKey, SealingKey,
-                 UnboundKey, AES_256_GCM, NONCE_LEN};
+use ring::aead::{
+    Aad, BoundKey, Nonce, NonceSequence, OpeningKey, SealingKey, UnboundKey, AES_256_GCM, NONCE_LEN,
+};
 use ring::rand::{SecureRandom, SystemRandom};
 use zeroize::Zeroizing;
 
@@ -25,7 +26,10 @@ const SEPARATOR: u8 = 0x00;
 struct OneTimeNonce(Option<[u8; NONCE_LEN]>);
 impl NonceSequence for OneTimeNonce {
     fn advance(&mut self) -> Result<Nonce, ring::error::Unspecified> {
-        self.0.take().map(Nonce::assume_unique_for_key).ok_or(ring::error::Unspecified)
+        self.0
+            .take()
+            .map(Nonce::assume_unique_for_key)
+            .ok_or(ring::error::Unspecified)
     }
 }
 
@@ -42,7 +46,8 @@ pub fn encrypt_secret(
 
     // 1. Generate a fresh random 256-bit DEK
     let mut dek = Zeroizing::new([0u8; 32]);
-    rng.fill(dek.as_mut()).map_err(|_| EnclaveError::AesGcmEncrypt)?;
+    rng.fill(dek.as_mut())
+        .map_err(|_| EnclaveError::AesGcmEncrypt)?;
 
     // 2. Seal the DEK using the master key
     let sealed_dek = seal(dek.as_ref(), purpose, provider)?;
@@ -50,10 +55,11 @@ pub fn encrypt_secret(
 
     // 3. Encrypt the plaintext with the DEK
     let mut nonce_bytes = [0u8; NONCE_LEN];
-    rng.fill(&mut nonce_bytes).map_err(|_| EnclaveError::AesGcmEncrypt)?;
-
-    let unbound = UnboundKey::new(&AES_256_GCM, dek.as_ref())
+    rng.fill(&mut nonce_bytes)
         .map_err(|_| EnclaveError::AesGcmEncrypt)?;
+
+    let unbound =
+        UnboundKey::new(&AES_256_GCM, dek.as_ref()).map_err(|_| EnclaveError::AesGcmEncrypt)?;
     let mut sk = SealingKey::new(unbound, OneTimeNonce(Some(nonce_bytes)));
 
     let mut ciphertext = plaintext.to_vec();
@@ -88,7 +94,9 @@ pub fn decrypt_secret(
     // 2. Unseal the DEK
     let dek_bytes = unseal(sealed_dek, purpose, provider)?;
     if dek_bytes.len() != 32 {
-        return Err(EnclaveError::Unsealing { msg: "DEK wrong length after unseal" });
+        return Err(EnclaveError::Unsealing {
+            msg: "DEK wrong length after unseal",
+        });
     }
     let dek = Zeroizing::new({
         let mut a = [0u8; 32];
@@ -100,8 +108,8 @@ pub fn decrypt_secret(
     let mut nonce_bytes = [0u8; NONCE_LEN];
     nonce_bytes.copy_from_slice(nonce_bytes_slice);
 
-    let unbound = UnboundKey::new(&AES_256_GCM, dek.as_ref())
-        .map_err(|_| EnclaveError::AesGcmDecrypt)?;
+    let unbound =
+        UnboundKey::new(&AES_256_GCM, dek.as_ref()).map_err(|_| EnclaveError::AesGcmDecrypt)?;
     let mut ok = OpeningKey::new(unbound, OneTimeNonce(Some(nonce_bytes)));
 
     let mut in_out = ciphertext_with_tag.to_vec();

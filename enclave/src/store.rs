@@ -71,11 +71,7 @@ impl Store {
     // ── Write ─────────────────────────────────────────────────────────────────
 
     /// Persist a new or updated secret record + its sealed blob.
-    pub fn save(
-        &self,
-        record: &SecretRecord,
-        blob: &[u8],
-    ) -> Result<(), EnclaveError> {
+    pub fn save(&self, record: &SecretRecord, blob: &[u8]) -> Result<(), EnclaveError> {
         let meta_json = serde_json::to_vec_pretty(record)?;
         fs::write(self.meta_path(&record.id), &meta_json)?;
         fs::write(self.blob_path(&record.id), blob)?;
@@ -124,7 +120,9 @@ impl Store {
         self.list_all()?
             .into_iter()
             .find(|r| r.name == name && r.deleted_at.is_none())
-            .ok_or_else(|| EnclaveError::NotFound { id: name.to_string() })
+            .ok_or_else(|| EnclaveError::NotFound {
+                id: name.to_string(),
+            })
     }
 
     // ── List ──────────────────────────────────────────────────────────────────
@@ -168,8 +166,12 @@ impl Store {
     pub fn hard_delete(&self, id: &Uuid) -> Result<(), EnclaveError> {
         let m = self.meta_path(id);
         let b = self.blob_path(id);
-        if m.exists() { fs::remove_file(&m)?; }
-        if b.exists() { fs::remove_file(&b)?; }
+        if m.exists() {
+            fs::remove_file(&m)?;
+        }
+        if b.exists() {
+            fs::remove_file(&b)?;
+        }
         Ok(())
     }
 
@@ -188,9 +190,9 @@ impl Store {
     pub fn crypto_shred(&self, id: &Uuid) -> Result<(), EnclaveError> {
         let m = self.meta_path(id);
         let b = self.blob_path(id);
-        
-        use std::io::Write;
+
         use std::fs::OpenOptions;
+        use std::io::Write;
 
         for path in [&m, &b] {
             if path.exists() {
@@ -209,4 +211,3 @@ impl Store {
         Ok(())
     }
 }
-

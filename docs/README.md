@@ -1,4 +1,4 @@
-﻿# `traces-sm` — 100% Rust-Native Multi-OS SGX Secrets & Key Management Framework
+# `traces-sm` — 100% Rust-Native Multi-OS SGX Secrets & Key Management Framework
 
 `traces-sm` is a **100% Rust-Native**, enterprise-grade Key & Secret Management Framework built on **Intel SGX using Fortanix EDP** (`x86_64-fortanix-unknown-sgx`).
 

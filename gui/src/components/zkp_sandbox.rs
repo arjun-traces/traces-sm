@@ -57,7 +57,7 @@ pub fn zkp_sandbox_view() -> Html {
                         {"Simulate Paillier PHE Add"}
                     </button>
                 </div>
-                
+
                 <div class="bg-gray-900 rounded-lg shadow border border-gray-700 flex flex-col h-80">
                     <div class="px-4 py-3 border-b border-gray-800 flex justify-between items-center bg-gray-800 rounded-t-lg">
                         <h3 class="text-gray-400 text-sm font-medium">{"Operation Log"}</h3>

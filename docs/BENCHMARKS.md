@@ -1,4 +1,4 @@
-﻿# `traces-sm` Performance Benchmarks & SLO Verification
+# `traces-sm` Performance Benchmarks & SLO Verification
 
 This document details cryptographic micro-benchmarks generated via Criterion (`benches/sealing_bench.rs`).
 

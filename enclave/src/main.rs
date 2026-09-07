@@ -5,30 +5,30 @@
 
 use std::sync::Arc;
 
-pub mod error;
-pub mod models;
-pub mod config;
-pub mod sealing;
-pub mod crypto;
-pub mod keygen;
-pub mod zkp;
-pub mod he;
-pub mod store;
 pub mod auth;
-pub mod server;
-pub mod drbg;
-pub mod nist;
+pub mod config;
+pub mod crypto;
 pub mod dkg;
+pub mod drbg;
+pub mod error;
 pub mod frost;
-pub mod pqc;
+pub mod he;
+pub mod keygen;
+pub mod models;
+pub mod nist;
 pub mod policy;
+pub mod pqc;
+pub mod sealing;
+pub mod server;
+pub mod store;
+pub mod zkp;
 
-use crate::config::Config;
-use crate::sealing::{SimSealingProvider, HwSealingProvider, SealingKeyProvider};
-use crate::store::Store;
 use crate::auth::EnclaveTokenService;
-use crate::server::EnclaveState;
+use crate::config::Config;
 use crate::policy::{PolicyEngine, SecurityPolicy};
+use crate::sealing::{HwSealingProvider, SealingKeyProvider, SimSealingProvider};
+use crate::server::EnclaveState;
+use crate::store::Store;
 
 fn main() {
     env_logger::init();
@@ -44,8 +44,14 @@ fn main() {
     // Initialise NIST SP 800-90B DRBG & Policy Engine
     let drbg_status = drbg::init_drbg_health_check();
     let policy_engine = PolicyEngine::new(SecurityPolicy::default());
-    policy_engine.validate_in_memory_protection().expect("In-memory protection validation failed");
-    log::info!("NIST SP 800-90B DRBG & Mandatory Security Policy Enforced: APT={}, RCT={}", drbg_status.apt_passed, drbg_status.rct_passed);
+    policy_engine
+        .validate_in_memory_protection()
+        .expect("In-memory protection validation failed");
+    log::info!(
+        "NIST SP 800-90B DRBG & Mandatory Security Policy Enforced: APT={}, RCT={}",
+        drbg_status.apt_passed,
+        drbg_status.rct_passed
+    );
 
     // ── Sealing provider ──────────────────────────────────────────────────────
     let provider: Arc<dyn SealingKeyProvider> = if cfg.sgx_mode == "HW" {

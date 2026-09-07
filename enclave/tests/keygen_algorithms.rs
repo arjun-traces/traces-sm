@@ -170,12 +170,22 @@ fn tc_kg_003_symmetric_keys_have_no_public_half() {
 fn tc_kg_004_exported_pem_is_rfc7468_conformant() {
     let p = FixedKeyProvider::new(0x7A);
 
-    for alg in [KeyAlgorithm::Ed25519, KeyAlgorithm::EcdsaP256, KeyAlgorithm::Rsa2048] {
+    for alg in [
+        KeyAlgorithm::Ed25519,
+        KeyAlgorithm::EcdsaP256,
+        KeyAlgorithm::Rsa2048,
+    ] {
         let kp = generate_key_pair(alg.clone(), &p).expect("keygen");
         let pem = kp.public_key_pem;
 
-        assert!(pem.starts_with("-----BEGIN PUBLIC KEY-----"), "{alg}: bad PEM header");
-        assert!(pem.trim_end().ends_with("-----END PUBLIC KEY-----"), "{alg}: bad PEM footer");
+        assert!(
+            pem.starts_with("-----BEGIN PUBLIC KEY-----"),
+            "{alg}: bad PEM header"
+        );
+        assert!(
+            pem.trim_end().ends_with("-----END PUBLIC KEY-----"),
+            "{alg}: bad PEM footer"
+        );
 
         let body: String = pem
             .lines()
@@ -214,8 +224,14 @@ fn tc_kg_004_exported_pem_is_rfc7468_conformant() {
 #[test]
 fn tc_kg_020_pqc_is_implemented() {
     let stubs: Vec<(&str, bool)> = vec![
-        ("ML-KEM-768 keygen", pqc::generate_ml_kem_768_keypair().is_err()),
-        ("ML-KEM-1024 keygen", pqc::generate_ml_kem_1024_keypair().is_err()),
+        (
+            "ML-KEM-768 keygen",
+            pqc::generate_ml_kem_768_keypair().is_err(),
+        ),
+        (
+            "ML-KEM-1024 keygen",
+            pqc::generate_ml_kem_1024_keypair().is_err(),
+        ),
         ("ML-KEM encapsulate", pqc::ml_kem_encapsulate(&[]).is_err()),
         ("ML-DSA-3 keygen", pqc::generate_ml_dsa_3_keypair().is_err()),
         ("ML-DSA-5 keygen", pqc::generate_ml_dsa_5_keypair().is_err()),
