@@ -169,8 +169,25 @@ When creating an issue:
 
 ---
 
+## 📸 Screenshots & Console Previews
+
+### 🖥️ 1. SGX Enclave Secrets & Key Management Console (`desktop/` & `gui/`)
+> *Real-time Intel SGX Hardware Enclave status (`SGX HW_ACTIVE`), RA-TLS mutual attestation, distributed key generation (DKG) topology, and volatile memory zeroization.*
+
+![traces-sm SGX Secrets & Key Management Console](docs/images/dashboard.svg)
+
+---
+
+### 🔑 2. NIST SP 800-57 Key Lifecycle & Cryptoperiod State Matrix
+> *Visual cryptoperiod monitoring, key volume thresholds, algorithm classification (RSA-4096, ECDSA-P256, ML-KEM-768), and automated lifecycle state transitions (Operational, Pre-Operational, Deactivated, Destroyed).*
+
+![traces-sm NIST SP 800-57 Key Lifecycle Matrix](docs/images/key_lifecycle.svg)
+
+---
+
 ## 📜 Project Badge & License
 
 Project badge entry owned by: [boosters-research](https://www.bestpractices.dev/en/users/56453).Entry created on 2026-09-07 03:59:29 UTC, last updated on 2026-09-07 09:07:03 UTC.
 This data is available under the [Community Data License Agreement – Permissive, Version 2.0 (CDLA-Permissive-2.0)](https://cdla.dev/permissive-2-0/). The code is licensed under Apache.
+
 
