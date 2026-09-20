@@ -33,7 +33,7 @@
       "Cloud"
     ],
     "status": "Active",
-    "last_updated": "2026-09-19T00:09:13.068336+00:00"
+    "last_updated": "2026-09-20T00:10:14.725008+00:00"
   },
   {
     "id": "hackerone-common_codes",
@@ -60,7 +60,7 @@
       "HackerOne"
     ],
     "status": "Active",
-    "last_updated": "2026-09-19T00:09:13.821934+00:00"
+    "last_updated": "2026-09-20T00:10:15.310388+00:00"
   },
   {
     "id": "hackerone-wolt",
@@ -87,7 +87,7 @@
       "HackerOne"
     ],
     "status": "Active",
-    "last_updated": "2026-09-19T00:09:13.821970+00:00"
+    "last_updated": "2026-09-20T00:10:15.310423+00:00"
   },
   {
     "id": "hackerone-agoda-public",
@@ -114,7 +114,7 @@
       "HackerOne"
     ],
     "status": "Active",
-    "last_updated": "2026-09-19T00:09:13.821976+00:00"
+    "last_updated": "2026-09-20T00:10:15.310431+00:00"
   },
   {
     "id": "hackerone-coupang_tw",
@@ -141,6 +141,6 @@
       "HackerOne"
     ],
     "status": "Active",
-    "last_updated": "2026-09-19T00:09:13.821981+00:00"
+    "last_updated": "2026-09-20T00:10:15.310440+00:00"
   }
 ]
