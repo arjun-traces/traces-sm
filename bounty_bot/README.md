@@ -12,7 +12,7 @@
 | **Paid Bug Bounties** | **11** |
 | **Vulnerability Disclosure Programs (VDPs)** | **5** |
 | **Combined Max Bounty Pool** | **$2,860,000.00** |
-| **Last Bot Sync** | `2026-09-27 03:12:37 UTC` |
+| **Last Bot Sync** | `2026-09-28 03:09:18 UTC` |
 
 ---
 
