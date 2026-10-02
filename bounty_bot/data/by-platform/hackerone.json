@@ -33,7 +33,34 @@
       "Cloud"
     ],
     "status": "Active",
-    "last_updated": "2026-10-01T03:41:06.191429+00:00"
+    "last_updated": "2026-10-02T03:40:37.518192+00:00"
+  },
+  {
+    "id": "hackerone-omarchy",
+    "name": "Omarchy (HackerOne)",
+    "organization": "Omarchy",
+    "platform": "HackerOne",
+    "program_type": "Bug Bounty",
+    "url": "https://hackerone.com/omarchy",
+    "policy_url": "https://hackerone.com/omarchy",
+    "max_bounty_usd": 10000.0,
+    "min_bounty_usd": null,
+    "reward_types": [
+      "Cash",
+      "Swag"
+    ],
+    "scope_summary": [
+      "*.omarchy.com"
+    ],
+    "out_of_scope_summary": [],
+    "contact_email": null,
+    "security_txt_url": null,
+    "tags": [
+      "Web",
+      "HackerOne"
+    ],
+    "status": "Active",
+    "last_updated": "2026-10-02T03:40:38.353023+00:00"
   },
   {
     "id": "hackerone-common_codes",
@@ -60,7 +87,7 @@
       "HackerOne"
     ],
     "status": "Active",
-    "last_updated": "2026-10-01T03:41:06.494905+00:00"
+    "last_updated": "2026-10-02T03:40:38.353053+00:00"
   },
   {
     "id": "hackerone-wolt",
@@ -87,7 +114,7 @@
       "HackerOne"
     ],
     "status": "Active",
-    "last_updated": "2026-10-01T03:41:06.494939+00:00"
+    "last_updated": "2026-10-02T03:40:38.353061+00:00"
   },
   {
     "id": "hackerone-agoda-public",
@@ -114,7 +141,7 @@
       "HackerOne"
     ],
     "status": "Active",
-    "last_updated": "2026-10-01T03:41:06.494952+00:00"
+    "last_updated": "2026-10-02T03:40:38.353069+00:00"
   },
   {
     "id": "hackerone-coupang_tw",
@@ -141,7 +168,7 @@
       "HackerOne"
     ],
     "status": "Active",
-    "last_updated": "2026-10-01T03:41:06.494959+00:00"
+    "last_updated": "2026-10-02T03:40:38.353078+00:00"
   },
   {
     "id": "hackerone-live_nation",
@@ -168,6 +195,6 @@
       "HackerOne"
     ],
     "status": "Active",
-    "last_updated": "2026-10-01T03:41:06.494969+00:00"
+    "last_updated": "2026-10-02T03:40:38.353084+00:00"
   }
 ]
