@@ -35,7 +35,7 @@
       "Hardware"
     ],
     "status": "Active",
-    "last_updated": "2026-10-28T03:38:12.833015+00:00"
+    "last_updated": "2026-10-29T03:58:05.728100+00:00"
   },
   {
     "id": "microsoft-msrc",
@@ -72,7 +72,7 @@
       "Web"
     ],
     "status": "Active",
-    "last_updated": "2026-10-28T03:38:12.833052+00:00"
+    "last_updated": "2026-10-29T03:58:05.728129+00:00"
   },
   {
     "id": "meta-whitehat",
@@ -107,7 +107,7 @@
       "Web"
     ],
     "status": "Active",
-    "last_updated": "2026-10-28T03:38:12.833067+00:00"
+    "last_updated": "2026-10-29T03:58:05.728137+00:00"
   },
   {
     "id": "apple-security-bounty",
@@ -143,7 +143,7 @@
       "Cloud"
     ],
     "status": "Active",
-    "last_updated": "2026-10-28T03:38:12.833080+00:00"
+    "last_updated": "2026-10-29T03:58:05.728144+00:00"
   },
   {
     "id": "cisa-vdp",
@@ -174,7 +174,7 @@
       "Infrastructure"
     ],
     "status": "Active",
-    "last_updated": "2026-10-28T03:38:12.833108+00:00"
+    "last_updated": "2026-10-29T03:58:05.728165+00:00"
   },
   {
     "id": "sectxt-cloudflare-com",
@@ -201,7 +201,7 @@
       "Web"
     ],
     "status": "Active",
-    "last_updated": "2026-10-28T03:38:13.491370+00:00"
+    "last_updated": "2026-10-29T03:58:06.292028+00:00"
   },
   {
     "id": "sectxt-stripe-com",
@@ -228,7 +228,7 @@
       "Web"
     ],
     "status": "Active",
-    "last_updated": "2026-10-28T03:38:14.192292+00:00"
+    "last_updated": "2026-10-29T03:58:06.916268+00:00"
   },
   {
     "id": "sectxt-airbnb-com",
@@ -255,7 +255,7 @@
       "Web"
     ],
     "status": "Active",
-    "last_updated": "2026-10-28T03:38:14.766992+00:00"
+    "last_updated": "2026-10-29T03:58:07.296936+00:00"
   },
   {
     "id": "sectxt-gitlab-com",
@@ -282,7 +282,7 @@
       "Web"
     ],
     "status": "Active",
-    "last_updated": "2026-10-28T03:38:14.979678+00:00"
+    "last_updated": "2026-10-29T03:58:07.517206+00:00"
   },
   {
     "id": "rss-what",
@@ -308,6 +308,6 @@
       "Newly Announced"
     ],
     "status": "Active",
-    "last_updated": "2026-10-28T03:38:16.321005+00:00"
+    "last_updated": "2026-10-29T03:58:08.750272+00:00"
   }
 ]
